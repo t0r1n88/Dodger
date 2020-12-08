@@ -10,10 +10,10 @@ def combine_all_docx(filename_master, files_list):
     number_of_sections = len(files_list)
     master = Document_compose(filename_master)
     composer = Composer(master)
-    for i in range(0, number_of_sections):
+    for i in range(1, number_of_sections):
         doc_temp = Document_compose(files_list[i])
         composer.append(doc_temp)
-    composer.save("Сертификаты.docx")
+    composer.save("Все сертификаты в одном файле.docx")
 
 
 # Считываем csv файл, не забывая что екселввский csv разделен на самомо деле не запятыми а точкой с запятой
@@ -36,14 +36,8 @@ files = []
 for filedocx in os.listdir():
     if filedocx.endswith(".docx"):
         files.append(filedocx)
-
 filename_master = files[0]
 # Функция для объединения документов
-number_of_sections = len(files)
-master = Document_compose(filename_master)
-composer = Composer(master)
-for i in range(1, number_of_sections):
-    doc_temp = Document_compose(files[i])
-    composer.append(doc_temp)
-composer.save("Все Свидетельства в одном файле.docx")
-# Объединяем документы
+
+combine_all_docx(filename_master,files)
+
