@@ -12,3 +12,5 @@ for row in data:
     context = {'lastname': row['lastname'], 'firstname': row['firstname'], 'number': row['number']}
     doc.render(context)
     doc.save(f'{row["lastname"]} {row["firstname"]}.docx')
+
+
