@@ -22,7 +22,7 @@ def get_list_files(path, extension='docx'):
                 paths.append(os.path.join(root,file))
     return paths
 
-files = get_list_files(folder,'pdf')
+files = get_list_files(folder)
 print(files)
 # Свойства полученных документов
 # Перебираем документы и извлекаем свойства
@@ -49,6 +49,15 @@ print(files)
 Список объектов Cell – ячейки в столбце
 Список объектов InlineShape – иллюстрации документа
 """
+
+for file in files:
+    doc = docx.Document(file)
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                print(cell.text)
+        print('**********')
+
 
 # # Получаем весь текст из документа
 # for file in paths:
