@@ -35,5 +35,4 @@ row = table.rows[1]
 row.cells[0].text = 'Foo bar to you.'
 row.cells[1].text = 'And a hearty foo bar to you too sir!'
 
-document.add_paragraph('Lorem ipsum dolor sit amet.', style='ListBullet')
 document.save('Prototype.docx')

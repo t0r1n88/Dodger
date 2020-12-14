@@ -18,7 +18,7 @@ def combine_all_docx(filename_master,files_list):
 
 
 # Считываем csv файл, не забывая что екселввский csv разделен на самомо деле не запятыми а точкой с запятой
-reader = csv.DictReader(open('resources/1.csv'), delimiter=';')
+reader = csv.DictReader(open('data/data.csv'), delimiter=';')
 # Конвертируем объект reader в список словарей
 data = list(reader)
 
@@ -29,11 +29,11 @@ for row in data:
     doc.render(context)
     doc.save(f'{row["lastname"]} {row["firstname"]}.docx')
 
-files = []
-# Получаем список всех файлов с расширением .docx в текущем каталоге.
-for filedocx in os.listdir():
-    if filedocx.endswith(".docx"):
-        files.append(filedocx)
-filename_master = files[0]
-(combine_all_docx(filename_master,files))
-# Объединяем документы
+# files = []
+# # Получаем список всех файлов с расширением .docx в текущем каталоге.
+# for filedocx in os.listdir():
+#     if filedocx.endswith(".docx"):
+#         files.append(filedocx)
+# filename_master = files[0]
+# (combine_all_docx(filename_master,files))
+# # Объединяем документы
