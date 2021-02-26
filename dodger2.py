@@ -5,17 +5,6 @@ from docx import Document as Document_compose
 import os
 
 
-def combine_all_docx(filename_master, files_list):
-    # Функция для объединения документов
-    number_of_sections = len(files_list)
-    master = Document_compose(filename_master)
-    composer = Composer(master)
-    for i in range(1, number_of_sections):
-        doc_temp = Document_compose(files_list[i])
-        composer.append(doc_temp)
-    composer.save("Все сертификаты в одном файле.docx")
-
-
 # Считываем csv файл, не забывая что екселввский csv разделен на самомо деле не запятыми а точкой с запятой
 reader = csv.DictReader(open('resources/data.csv'), delimiter=';')
 # Конвертируем объект reader в список словарей
@@ -40,13 +29,3 @@ for row in data:
                'hour': row['hour'],'base': row['base'], 'begin': row['begin'], 'end': row['end']}
     doc.render(context)
     doc.save(f'{row["lastname"]} {row["firstname"]}.docx')
-
-files = []
-# Получаем список всех файлов с расширением .docx в текущем каталоге.
-for filedocx in os.listdir():
-    if filedocx.endswith(".docx"):
-        files.append(filedocx)
-filename_master = files[0]
-# Функция для объединения документов
-
-# combine_all_docx(filename_master, files)
