@@ -1,39 +1,38 @@
-from docxtpl import DocxTemplate
-import csv
-from docxcompose.composer import Composer
-from docx import Document as Document_compose
-import os
-import time
+from tkinter import *
+from tkinter import filedialog
+# Создаем глобальный объект окна
+root = Tk()
+
+# Настройки окна
+
+def foo():
+    global myfile
+    myfile = filedialog.askopenfilename()
+    print((myfile))
+
+root['bg'] = '#fafafa'
+# Заголовок окна
+root.title('Для создания заявлений')
+root.wm_attributes('-alpha',1)
+root.geometry('640x480')
+
+root.resizable(width=False, height=False)
 
 
-def combine_all_docx(filename_master,files_list):
-    # Функция для объединения документов
-    number_of_sections=len(files_list)
-    master = Document_compose(filename_master)
-    composer = Composer(master)
-    for i in range(1, number_of_sections):
-        doc_temp = Document_compose(files_list[i])
-        composer.append(doc_temp)
-    composer.save("!Все Сертификаты в одном файле.docx")
+# Создадим холст на котором будем отрисовывать элементы
+canvas = Canvas(root, height=300, width=250)
+canvas.pack()
 
+# Создаем фрейм
+frame = Frame(root,bg='green')
+# frame.place(relx=0.15, rely=0.15, relwidth=0.7, relheight=0.7)
+frame.place(relx=0.15, rely=0.15, relwidth=0.7, relheight=0.7)
 
-# Считываем csv файл, не забывая что екселввский csv разделен на самомо деле не запятыми а точкой с запятой
-reader = csv.DictReader(open('data/data.csv'), delimiter=';')
-# Конвертируем объект reader в список словарей
-data = list(reader)
+# Создаем элементы
 
-# Создаем в цикле документы
-for row in data:
-    doc = DocxTemplate('resources/template.docx')
-    context = {'lastname': row['lastname'], 'firstname': row['firstname'], 'number': row['number']}
-    doc.render(context)
-    doc.save(f'{row["lastname"]} {row["firstname"]}.docx')
-
-# files = []
-# # Получаем список всех файлов с расширением .docx в текущем каталоге.
-# for filedocx in os.listdir():
-#     if filedocx.endswith(".docx"):
-#         files.append(filedocx)
-# filename_master = files[0]
-# (combine_all_docx(filename_master,files))
-# # Объединяем документы
+title = Label(frame,text='Во славу Omnissiah!!!', bg='cyan', font =40)
+# Располагаем элемент на фрейме
+title.pack()
+btn = Button(frame, text='Кнопка для дела',command=foo, bg='yellow')
+btn.pack()
+root.mainloop()
