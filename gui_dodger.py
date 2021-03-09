@@ -39,6 +39,7 @@ def generate_files():
     Функция для создания файлов из шаблона и файла с данными
     :return:
     """
+
     # Считываем csv файл, не забывая что екселввский csv разделен на самомо деле не запятыми а точкой с запятой
     reader = csv.DictReader(open(name_file_data), delimiter=';')
     # Конвертируем объект reader в список словарей
@@ -61,9 +62,9 @@ def generate_files():
                    'category': row['category'], 'name_prep': row['name_prep'], 'name_dir': row['name_dir'],
                    'hour': row['hour'], 'base': row['base'], 'begin': row['begin'], 'end': row['end']}
         doc.render(context)
-        doc.save(f'{row["lastname"]} {row["firstname"]}.docx')
+        doc.save(f'{path_to_end_folder}/{row["lastname"]} {row["firstname"]}.docx')
     messagebox.showinfo('Dodger','Создание файлов успешно завершено!')
-#TODO Генерация документов в выбранную папку
+#TODO контроль за тем чтобы были выбраны все 3 параметра
 
 
 # Создаем окно
