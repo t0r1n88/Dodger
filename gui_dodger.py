@@ -1,6 +1,8 @@
 from tkinter import *
 from tkinter import filedialog
 from tkinter import messagebox
+import csv
+from docxtpl import DocxTemplate
 
 
 # Функция выбора шаблона
@@ -10,9 +12,8 @@ def select_file_template():
     Функция для выбора файла шаблона
     :return: Путь к файлу шаблона
     """
+    global name_file_template
     name_file_template = filedialog.askopenfilename(filetypes=(('Word files', '*.docx'), ('all files', '*.*')))
-    print(name_file_template)
-    return name_file_template
 
 
 def select_file_data():
@@ -20,8 +21,8 @@ def select_file_data():
     Функция для выбора файла с данными на основе которых будет генерироваться
     :return: Путь к файлу с данными
     """
+    global name_file_data
     name_file_data = filedialog.askopenfilename(filetypes=(('Csv files', '*.csv'), ('all files', '*.*')))
-    print(name_file_data)
 
 
 def select_end_folder():
@@ -29,8 +30,8 @@ def select_end_folder():
     Функция для выбора папки куда будут генерироваться файлы
     :return:
     """
+    global path_to_end_folder
     path_to_end_folder = filedialog.askdirectory()
-    print(path_to_end_folder)
 
 
 def generate_files():
@@ -38,7 +39,31 @@ def generate_files():
     Функция для создания файлов из шаблона и файла с данными
     :return:
     """
-    messagebox.showinfo('Создано', 'Во славу Омниссии!!!')
+    # Считываем csv файл, не забывая что екселввский csv разделен на самомо деле не запятыми а точкой с запятой
+    reader = csv.DictReader(open(name_file_data), delimiter=';')
+    # Конвертируем объект reader в список словарей
+    data = list(reader)
+    # Создаем в цикле документы
+    for row in data:
+        doc = DocxTemplate(name_file_template)
+        number = ''
+        if len(row['number']) == 2:
+            number = '000' + row['number']
+        elif len(row['number']) == 3:
+            number = '00' + row['number']
+        elif len(row['number']) == 4:
+            number = '0' + row['number']
+        else:
+            number = row['number']
+        context = {'lastname': row['lastname'], 'firstname': row['firstname'], 'number': number,
+                   'profession': row['profession'], 'date_expiry': row['date_expiry'], 'date_issue': row['date_issue'],
+                   'qualification': row['qualification'],
+                   'category': row['category'], 'name_prep': row['name_prep'], 'name_dir': row['name_dir'],
+                   'hour': row['hour'], 'base': row['base'], 'begin': row['begin'], 'end': row['end']}
+        doc.render(context)
+        doc.save(f'{row["lastname"]} {row["firstname"]}.docx')
+    messagebox.showinfo('Dodger','Создание файлов успешно завершено!')
+#TODO Генерация документов в выбранную папку
 
 
 # Создаем окно
