@@ -76,6 +76,7 @@ def generate_certificates():
         # Создаем в цикле документы
         for row in data:
             doc = DocxTemplate(name_file_template_certificates)
+            # Код для того чтобы операторы вводили номера без нулей при заполнении таблицы с данными
             number = ''
             if len(row['number']) == 2:
                 number = '000' + row['number']
@@ -86,6 +87,8 @@ def generate_certificates():
             else:
                 number = row['number']
             context = {'lastname': row['lastname'], 'firstname': row['firstname'], 'number': number,
+                       'region_genitive_case': row['region_genitive_case'],
+                       'educator': row['educator'], 'type_program': row['type_program'],
                        'profession': row['profession'], 'date_expiry': row['date_expiry'],
                        'date_issue': row['date_issue'],
                        'qualification': row['qualification'],
@@ -142,35 +145,35 @@ tab_control = ttk.Notebook(window)
 
 # Создаем вкладку свидетельства о повышении
 tab_certificate = ttk.Frame(tab_control)
-tab_control.add(tab_certificate, text='Создание удостоверений')
+tab_control.add(tab_certificate, text='Создание свидетельств')
 tab_control.pack(expand=1, fill='both')
 
 
 # Добавляем виджеты на вкладку
 # Создаем метку для описания назначения программы
-lbl_hello = Label(tab_certificate, text='Скрипт для создания удостоверений')
+lbl_hello = Label(tab_certificate, text='Скрипт для создания свидетельств')
 lbl_hello.grid(column=0, row=0, padx=10, pady=25)
 
 # Создаем кнопку Выбрать шаблон
 
-btn_template_certificate = Button(tab_certificate, text='Выберите шаблон документа', font=('Arial Bold', 20),
+btn_template_certificate = Button(tab_certificate, text='1) Выберите шаблон свидетельства', font=('Arial Bold', 20),
                                   command=select_file_template_certificates, )
 btn_template_certificate.grid(column=0, row=1, padx=10, pady=10)
 
 # Создаем кнопку Выбрать файл с данными
-btn_data_certificate = Button(tab_certificate, text='Выберите файл с данными', font=('Arial Bold', 20),
+btn_data_certificate = Button(tab_certificate, text='2) Выберите файл с данными', font=('Arial Bold', 20),
                               command=select_file_data_certificates)
 btn_data_certificate.grid(column=0, row=2, padx=10, pady=10)
 
 # Создаем кнопку для выбора папки куда будут генерироваться файлы
 
-btn_choose_end_folder_certificate = Button(tab_certificate, text='Выберите конечную папку', font=('Arial Bold', 20),
+btn_choose_end_folder_certificate = Button(tab_certificate, text='3) Выберите конечную папку', font=('Arial Bold', 20),
                                            command=select_end_folder_certificates)
 btn_choose_end_folder_certificate.grid(column=0, row=3, padx=10, pady=10)
 
 # Создаем кнопку для запуска функции генерации файлов
 
-btn_create_files_certificate = Button(tab_certificate, text=' Создать документы', font=('Arial Bold', 20),
+btn_create_files_certificate = Button(tab_certificate, text='4) Создать свидетельства', font=('Arial Bold', 20),
                                       command=generate_certificates)
 btn_create_files_certificate.grid(column=0, row=4, padx=10, pady=10)
 
@@ -188,30 +191,30 @@ lbl_hello.grid(column=0, row=0, padx=10, pady=25)
 
 # Создаем кнопку Выбрать шаблон
 
-btn_template_scc = Button(tab_scc, text='Выберите шаблон документа', font=('Arial Bold', 20),
+btn_template_scc = Button(tab_scc, text='1) Выберите шаблон сертификата', font=('Arial Bold', 20),
                           command=select_file_template_scc, )
 btn_template_scc.grid(column=0, row=1, padx=10, pady=10)
 
 # Создаем кнопку Выбрать файл с данными
-btn_data_scc = Button(tab_scc, text='Выберите файл с данными', font=('Arial Bold', 20),
+btn_data_scc = Button(tab_scc, text='2) Выберите файл с данными', font=('Arial Bold', 20),
                       command=select_file_data_scc)
 btn_data_scc.grid(column=0, row=2, padx=10, pady=10)
 
 # Создаем кнопку для выбора папки куда будут генерироваться файлы
 
-btn_choose_end_folder_scc = Button(tab_scc, text='Выберите конечную папку', font=('Arial Bold', 20),
+btn_choose_end_folder_scc = Button(tab_scc, text='3) Выберите конечную папку', font=('Arial Bold', 20),
                                    command=select_end_folder_scc)
 btn_choose_end_folder_scc.grid(column=0, row=3, padx=10, pady=10)
 
 # Создаем кнопку для запуска функции генерации файлов
 
-btn_create_files_scc = Button(tab_scc, text=' Создать документы', font=('Arial Bold', 20),
+btn_create_files_scc = Button(tab_scc, text=' Создать сертификаты', font=('Arial Bold', 20),
                                       command=generate_scc)
 btn_create_files_scc.grid(column=0, row=4, padx=10, pady=10)
 
 
 # Создаем диплом о профессиональной переподготовке
 tab_diploma = ttk.Frame(tab_control)
-tab_control.add(tab_diploma, text='Создание дипломов проф. переподготовки')
+tab_control.add(tab_diploma, text='Создание удостоверений')
 
 window.mainloop()
