@@ -197,7 +197,7 @@ def generate_certificates():
             doc.render(context)
             doc.save(f'{path_to_end_folder_certificates}/{row["lastname"]} {row["firstname"]}.docx')
         messagebox.showinfo('Dodger', 'Создание удостоверений  успешно завершено!')
-    except NameError:
+    except NameError as e:
         messagebox.showinfo('Dodger', 'Выберите шаблон,файл с данными и папку куда будут генерироваться файлы')
 
 
@@ -313,4 +313,6 @@ btn_choose_end_folder_scc.grid(column=0, row=3, padx=10, pady=10)
 btn_create_files_scc = Button(tab_certificate, text=' Создать удостоверения', font=('Arial Bold', 20),
                               command=generate_certificates)
 btn_create_files_scc.grid(column=0, row=4, padx=10, pady=10)
+
+
 window.mainloop()
