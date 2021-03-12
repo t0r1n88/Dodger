@@ -17,13 +17,14 @@ from pymorphy2 import MorphAnalyzer
 import pandas as pd
 
 
-def create_cases(lastname, firstname, patronymic, lst_cases):
+def create_cases(lastname, firstname, patronymic, lst_cases,morph):
     """
     Функция для склонения ФИО по падежам
     :param lastname: Фамилия
     :param firstname: Имя
     :param patronymic: Отчество
     :param lst_cases: Список падежей по которым нужно просклонять слово
+    :param morph: Экземпляр класса morph
     :return:3 словаря в каждом из которых по 6 вариантов склоняемого слова
     """
     # Создаем словари где ключом будет падеж а значение слово в соответсвтующем падеже , хотя правильнее было бы использовать словари, где ключом был бы падеж
@@ -31,7 +32,7 @@ def create_cases(lastname, firstname, patronymic, lst_cases):
     dct_lastname = {case: '' for case in lst_cases}
     dct_firstname = {case: '' for case in lst_cases}
     dct_patronymic = {case: '' for case in lst_cases}
-    morph = MorphAnalyzer()
+
     # Анализируем каждое из слов
     lastname_parsed = morph.parse(lastname)[0]
     firstname_parsed = morph.parse(firstname)[0]
@@ -73,13 +74,14 @@ lst_cases = ['nomn', 'gent', 'datv', 'accs', 'ablt', 'loct']
 for row in base_df.itertuples():
     # Создаем список из строки,делим по пробелам
     lastname, firstname, patronymic = row[1].split()
-    # Анализируем каждое слово
-    dct_lastname, dct_firstname, dct_patronymic = create_cases(lastname, firstname, patronymic, lst_cases)
-    value_to_table = create_case_fio(dct_lastname, dct_firstname, dct_patronymic, lst_cases)
-    test.append(value_to_table)
+    gender = 'masc' if row[2] == 1 else 'femn'
+    # Склоняем слова
+    # dct_lastname, dct_firstname, dct_patronymic = create_cases(lastname, firstname, patronymic, lst_cases,morph)
+    # value_to_table = create_case_fio(dct_lastname, dct_firstname, dct_patronymic, lst_cases)
+    # test.append(value_to_table)
 
-# Создаем итоговый датафрейм
-df = pd.DataFrame(test)
-df.columns = ['Именительный', 'Родительный', 'Дательный', 'Винительный', 'Творительный', 'Предложный']
-# Сохраняем полученный датафрейм
-df.to_excel('fio_cases.xlsx',index=False)
+# # Создаем итоговый датафрейм
+# df = pd.DataFrame(test)
+# df.columns = ['Именительный', 'Родительный', 'Дательный', 'Винительный', 'Творительный', 'Предложный']
+# # Сохраняем полученный датафрейм
+# df.to_excel('fio_cases.xlsx',index=False)
