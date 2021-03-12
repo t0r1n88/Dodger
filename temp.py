@@ -38,20 +38,9 @@ def create_cases(lastname, firstname, patronymic, gender, lst_cases, morph=Morph
     dct_firstname = {case: '' for case in lst_cases}
     dct_patronymic = {case: '' for case in lst_cases}
 
-    # Анализируем каждое из слов
-    # lastname_parsed = parse_case(lastname)
-    # firstname_parsed = parse_case(firstname)
-    # patronymic_parsed = parse_case(patronymic)
-    #
-    # lastname_parsed = morph.parse(lastname)[0]
-    # firstname_parsed = morph.parse(firstname)[0]
-    # patronymic_parsed = morph.parse(patronymic)[0]
 
     # Перебираем список падежей и при каждой итерации добавляем в словарь по соответствующему ключу слово в текущем падеже
     for case in lst_cases:
-        # dct_lastname[case] = lastname_parsed.inflect({case}).word
-        # dct_firstname[case] = firstname_parsed.inflect({case}).word
-        # dct_patronymic[case] = patronymic_parsed.inflect({case}).word
         dct_lastname[case] = parse_case(lastname, gender, case, tag_lastname, morph)
         dct_firstname[case] = parse_case(firstname, gender, case, tag_firstname, morph)
         dct_patronymic[case] = parse_case(patronymic, gender, case, tag_patr, morph)
@@ -90,12 +79,10 @@ def parse_case(word, gender, case, tag_fio, morph=MorphAnalyzer()):
     word_parsed = morph.parse(word)
     # Перебираем полученные разборы на предмет совпадений
     for par in word_parsed:
-        if tag_fio in par.tag:
-            if par.inflect({gender,tag_fio,'sing'}):
-                print(par.inflect({gender,case}).word)
-                return par.inflect({case}).word
-            return par.word
-    return par.word
+        if (tag_fio in par.tag) and (gender in par.tag):
+            return par.inflect({gender, case}).word
+
+    return word
 
 
 base_df = pd.read_excel('resources/fio.xlsx')
@@ -118,4 +105,4 @@ for row in base_df.itertuples():
 df = pd.DataFrame(test)
 df.columns = ['Именительный', 'Родительный', 'Дательный', 'Винительный', 'Творительный', 'Предложный']
 # Сохраняем полученный датафрейм
-df.to_excel('fio_cases.xlsx',index=False)
+df.to_excel('fio_cases.xlsx', index=False)
