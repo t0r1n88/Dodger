@@ -90,7 +90,7 @@ def parse_case(word, gender, case, tag_fio, morph=MorphAnalyzer()):
     word_parsed = morph.parse(word)
     # Перебираем полученные разборы на предмет совпадений
     for par in word_parsed:
-        if tag_fio and gender in par.tag:
+        if (tag_fio in par.tag) and (gender in par.tag):
             # print(par.inflect({gender,case}).word)
             return par.inflect({gender,case}).word
 
