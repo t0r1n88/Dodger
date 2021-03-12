@@ -4,7 +4,7 @@ from pymorphy2 import MorphAnalyzer
 morph = MorphAnalyzer()
 
 # Слово для примера
-word = 'капошина'
+word = 'иксанова'
 lst_case = ['nomn', 'gent', 'datv', 'accs', 'ablt', 'loct']
 
 # # Анализируем слово
@@ -13,8 +13,7 @@ lst_case = ['nomn', 'gent', 'datv', 'accs', 'ablt', 'loct']
 
 word_parsed =morph.parse(word)
 for par in word_parsed:
-    print(par)
-    if {'femn','sing'} in par.tag:
+    if {'femn','sing','Surn'} in par.tag:
         print(par.inflect({'datv'}))
 
 
