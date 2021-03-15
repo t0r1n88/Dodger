@@ -14,7 +14,7 @@ for row in data:
     # Создаем объект шаблона
     doc = DocxTemplate('resources/template_mcpk.docx')
     # Получаем данные из объекта data
-    context = {'nominative_fio': row['nominative_fio'], 'genitive_fio': row['genitive_fio'], 'program': row['program']}
+    context = {'nominative_fio': row['nominative_fio'], 'genitive_fio': row['genitive_fio'], 'программа': row['программа']}
     doc.render(context)
     doc.save(f'{row["nominative_fio"]} .docx')
 
