@@ -189,6 +189,89 @@ def generate_contracts():
     except NameError as e:
         messagebox.showinfo('Miranda', f'Выберите шаблон,файл с данными и папку куда будут генерироваться файлы')
 
+def generate_order_enroll():
+    """
+    Функция для создания сертификатов
+
+    """
+    try:
+        reader = csv.DictReader(open(name_file_data_order_enroll), delimiter=';')
+        # Конвертируем объект reader в список словарей
+        data = list(reader)
+
+        # Создаем в цикле документы
+        for row in data:
+            doc = DocxTemplate(name_file_template_order_enroll)
+
+            context = {'dative_case_lastname': row['dative_case_lastname'],
+                       'dative_case_firstname': row['dative_case_firstname'],
+                       'time': row['time'],
+                       'category_program': row['category_program'], 'format_program': row['format_program'],
+                       'name_program': row['name_program'],
+                       'hour': row['hour'],
+                       'chief_copp': row['chief_copp'], 'city': row['city'], 'year': row['year']
+                       }
+            doc.render(context)
+            doc.save(f'{path_to_end_folder_order_enroll}/{row["dative_case_lastname"]} {row["dative_case_firstname"]}.docx')
+        messagebox.showinfo('Dodger', 'Создание сертификатов успешно завершено!')
+
+    except NameError:
+        messagebox.showinfo('Dodger', 'Выберите шаблон,файл с данными и папку куда будут генерироваться сертификаты')
+
+def select_file_template_certificates():
+    """
+    Функция для выбора файла шаблона
+    :return: Путь к файлу шаблона
+    """
+    global name_file_template_certificates
+    name_file_template_certificates = filedialog.askopenfilename(filetypes=(('Word files', '*.docx'), ('all files', '*.*')))
+
+
+def select_file_data_certificates():
+    """
+    Функция для выбора файла с данными на основе которых будет генерироваться
+    :return: Путь к файлу с данными
+    """
+    global name_file_data_certificates
+    name_file_data_certificates = filedialog.askopenfilename(filetypes=(('Csv files', '*.csv'), ('all files', '*.*')))
+
+
+def select_end_folder_certificates():
+    """
+    Функция для выбора папки куда будут генерироваться файлы
+    :return:
+    """
+    global path_to_end_folder_certificates
+    path_to_end_folder_certificates = filedialog.askdirectory()
+
+
+
+def select_file_template_order_enroll():
+    """
+    Функция для выбора файла шаблона
+    :return: Путь к файлу шаблона
+    """
+    global name_file_template_order_enroll
+    name_file_template_order_enroll = filedialog.askopenfilename(filetypes=(('Word files', '*.docx'), ('all files', '*.*')))
+
+
+def select_file_data_order_enroll():
+    """
+    Функция для выбора файла с данными на основе которых будет генерироваться
+    :return: Путь к файлу с данными
+    """
+    global name_file_data_order_enroll
+    name_file_data_order_enroll = filedialog.askopenfilename(filetypes=(('Csv files', '*.csv'), ('all files', '*.*')))
+
+
+def select_end_folder_order_enroll():
+    """
+    Функция для выбора папки куда будут генерироваться файлы
+    :return:
+    """
+    global path_to_end_folder_order_enroll
+    path_to_end_folder_order_enroll = filedialog.askdirectory()
+
 
 # Создаем окно
 if __name__ == '__main__':
@@ -240,39 +323,40 @@ if __name__ == '__main__':
                                        )
     btn_create_files_contract.grid(column=0, row=4, padx=10, pady=10)
 
-    #
-    #
-    # # Создаем вкладку для создания  сертификатов
-    # tab_scc = ttk.Frame(tab_control)
-    # tab_control.add(tab_scc, text='Создание сертификатов')
-    #
-    # # Добавляем виджеты на вкладку
-    # lbl_hello = Label(tab_scc, text='Скрипт для создания сертификатов')
-    # lbl_hello.grid(column=0, row=0, padx=10, pady=25)
-    #
-    # # Создаем кнопку Выбрать шаблон
-    #
-    # btn_template_scc = Button(tab_scc, text='1) Выберите шаблон сертификата', font=('Arial Bold', 20),
-    #                           command=select_file_template_scc, )
-    # btn_template_scc.grid(column=0, row=1, padx=10, pady=10)
-    #
-    # # Создаем кнопку Выбрать файл с данными
-    # btn_data_scc = Button(tab_scc, text='2) Выберите файл с данными', font=('Arial Bold', 20),
-    #                       command=select_file_data_scc)
-    # btn_data_scc.grid(column=0, row=2, padx=10, pady=10)
-    #
-    # # Создаем кнопку для выбора папки куда будут генерироваться файлы
-    #
-    # btn_choose_end_folder_scc = Button(tab_scc, text='3) Выберите конечную папку', font=('Arial Bold', 20),
-    #                                    command=select_end_folder_scc)
-    # btn_choose_end_folder_scc.grid(column=0, row=3, padx=10, pady=10)
-    #
-    # # Создаем кнопку для запуска функции генерации файлов
-    #
-    # btn_create_files_scc = Button(tab_scc, text=' Создать сертификаты', font=('Arial Bold', 20),
-    #                               command=generate_scc)
-    # btn_create_files_scc.grid(column=0, row=4, padx=10, pady=10)
-    #
+
+
+
+    # Создаем вкладку для создания приказов о зачислении
+    tab_order_enroll = ttk.Frame(tab_control)
+    tab_control.add(tab_order_enroll, text='Создание приказов о зачислении')
+
+    # Добавляем виджеты на вкладку
+    lbl_hello = Label(tab_order_enroll, text='Скрипт для создания приказов о зачислении')
+    lbl_hello.grid(column=0, row=0, padx=10, pady=25)
+
+    # Создаем кнопку Выбрать шаблон
+
+    btn_template_scc = Button(tab_order_enroll, text='1) Выберите шаблон приказа', font=('Arial Bold', 20),
+                              command=select_file_template_order_enroll, )
+    btn_template_scc.grid(column=0, row=1, padx=10, pady=10)
+
+    # Создаем кнопку Выбрать файл с данными
+    btn_data_scc = Button(tab_order_enroll, text='2) Выберите файл с данными', font=('Arial Bold', 20),
+                          command=select_file_data_order_enroll)
+    btn_data_scc.grid(column=0, row=2, padx=10, pady=10)
+
+    # Создаем кнопку для выбора папки куда будут генерироваться файлы
+
+    btn_choose_end_folder_scc = Button(tab_order_enroll, text='3) Выберите конечную папку', font=('Arial Bold', 20),
+                                       command=select_end_folder_order_enroll)
+    btn_choose_end_folder_scc.grid(column=0, row=3, padx=10, pady=10)
+
+    # Создаем кнопку для запуска функции генерации файлов
+
+    btn_create_files_scc = Button(tab_order_enroll, text=' Создать приказы', font=('Arial Bold', 20),
+                                  command=generate_order_enroll)
+    btn_create_files_scc.grid(column=0, row=4, padx=10, pady=10)
+
     #
     #
     #
