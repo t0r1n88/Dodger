@@ -99,7 +99,7 @@ def select_file_data_contracts():
     base_df = pd.read_csv(name_file_data_contracts, delimiter=';', encoding='cp1251', usecols=['ФиоСлушателя', 'Пол'])
     # Начинаем обработку
     # Создаем объект анализатор
-    morph = MorphAnalyzer()
+    morph = MorphAnalyzer('c:/Users/1\PycharmProjects\Dodger/venv\Lib\site-packages/pymorphy2_dicts_ru/data/')
     # Список падежей в которые нужно просклонять
     lst_cases = ['nomn', 'gent', 'datv', 'accs', 'ablt', 'loct']
     # Счетчик строк для того чтобы можно было узнать на какой строке возникла проблема
@@ -224,17 +224,7 @@ def generate_order_enroll():
                        'КонецОбучения': group[1][0]['КонецОбучения'],
                        'Исполнитель': group[1][0]['Исполнитель'],
                        'СрокВЧасах': group[1][0]['СрокВЧасах'], 'lst_students': fio_lst}
-                       # }          context = {'ДатаПодписанияПриказа': group[0]['ДатаПодписанияПриказа'],
-                       # 'НомерПриказа': row['НомерПриказа'],
-                       # 'НазваниеОрганизации': row['НазваниеОрганизации'],
-                       # 'Профессия': row['Профессия'], 'Группа': row['Группа'],
-                       # 'Программа': row['Программа'], 'ДолжностьПодписывающего': row['ДолжностьПодписывающего'],
-                       # 'НачалоОбучения': row['НачалоОбучения'],
-                       # 'ФиоПодписывающего': row['ФиоПодписывающего'],
-                       # 'КонецОбучения': row['КонецОбучения'],
-                       # 'Исполнитель': row['Исполнитель'],
-                       # 'СрокВЧасах': row['СрокВЧасах'], 'lst_students': lst_students
-                       # }
+
             doc.render(context)
             # doc.save(f'{path_to_end_folder_order_enroll}/{row["dative_case_lastname"]} {row["dative_case_firstname"]}.docx')
             doc.save(f'{path_to_end_folder_order_enroll}/{group[1][0]["Группа"]}.docx')
