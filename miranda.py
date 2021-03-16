@@ -189,6 +189,7 @@ def generate_contracts():
     except NameError as e:
         messagebox.showinfo('Miranda', f'Выберите шаблон,файл с данными и папку куда будут генерироваться файлы')
 
+
 def generate_order_enroll():
     """
     Функция для создания сертификатов
@@ -198,25 +199,50 @@ def generate_order_enroll():
         reader = csv.DictReader(open(name_file_data_order_enroll), delimiter=';')
         # Конвертируем объект reader в список словарей
         data = list(reader)
-
-        # Создаем в цикле документы
+        # Создаем словарь, где ключ это наименование  группы а значение это список студентов с подобной группой
+        df = pd.read_csv(name_file_data_order_enroll, delimiter=';', encoding='cp1251')
+        dct_groups = {group: [] for group in df['Группа'].unique()}
         for row in data:
-            doc = DocxTemplate(name_file_template_order_enroll)
+            dct_groups[row['Группа']].append(row)
 
-            context = {'dative_case_lastname': row['dative_case_lastname'],
-                       'dative_case_firstname': row['dative_case_firstname'],
-                       'time': row['time'],
-                       'category_program': row['category_program'], 'format_program': row['format_program'],
-                       'name_program': row['name_program'],
-                       'hour': row['hour'],
-                       'chief_copp': row['chief_copp'], 'city': row['city'], 'year': row['year']
-                       }
+        for group in dct_groups.items():
+            # Перебираем по группам
+        # Создаем в цикле документы
+            doc = DocxTemplate(name_file_template_order_enroll)
+            fio_lst = []
+            for row in group[1]:
+                fio_lst.append(row['ФиоСлушателя'])
+
+
+            context = {'ДатаПодписанияПриказа': group[1][0]['ДатаПодписанияПриказа'],
+                       'НомерПриказа': group[1][0]['НомерПриказа'],
+                       'НазваниеОрганизации': group[1][0]['НазваниеОрганизации'],
+                       'Профессия': group[1][0]['Профессия'], 'Группа': group[1][0]['Группа'],
+                       'Программа': group[1][0]['Программа'], 'ДолжностьПодписывающего': group[1][0]['ДолжностьПодписывающего'],
+                       'НачалоОбучения': group[1][0]['НачалоОбучения'],
+                       'ФиоПодписывающего': group[1][0]['ФиоПодписывающего'],
+                       'КонецОбучения': group[1][0]['КонецОбучения'],
+                       'Исполнитель': group[1][0]['Исполнитель'],
+                       'СрокВЧасах': group[1][0]['СрокВЧасах'], 'lst_students': fio_lst}
+                       # }          context = {'ДатаПодписанияПриказа': group[0]['ДатаПодписанияПриказа'],
+                       # 'НомерПриказа': row['НомерПриказа'],
+                       # 'НазваниеОрганизации': row['НазваниеОрганизации'],
+                       # 'Профессия': row['Профессия'], 'Группа': row['Группа'],
+                       # 'Программа': row['Программа'], 'ДолжностьПодписывающего': row['ДолжностьПодписывающего'],
+                       # 'НачалоОбучения': row['НачалоОбучения'],
+                       # 'ФиоПодписывающего': row['ФиоПодписывающего'],
+                       # 'КонецОбучения': row['КонецОбучения'],
+                       # 'Исполнитель': row['Исполнитель'],
+                       # 'СрокВЧасах': row['СрокВЧасах'], 'lst_students': lst_students
+                       # }
             doc.render(context)
-            doc.save(f'{path_to_end_folder_order_enroll}/{row["dative_case_lastname"]} {row["dative_case_firstname"]}.docx')
-        messagebox.showinfo('Dodger', 'Создание сертификатов успешно завершено!')
+            # doc.save(f'{path_to_end_folder_order_enroll}/{row["dative_case_lastname"]} {row["dative_case_firstname"]}.docx')
+            doc.save(f'{path_to_end_folder_order_enroll}/{group[1][0]["Группа"]}.docx')
+        messagebox.showinfo('Dodger', 'Создание приказов успешно завершено!')
 
     except NameError:
-        messagebox.showinfo('Dodger', 'Выберите шаблон,файл с данными и папку куда будут генерироваться сертификаты')
+        messagebox.showinfo('Dodger', 'Выберите шаблон,файл с данными и папку куда будут генерироваться приказы')
+
 
 def select_file_template_certificates():
     """
@@ -224,7 +250,8 @@ def select_file_template_certificates():
     :return: Путь к файлу шаблона
     """
     global name_file_template_certificates
-    name_file_template_certificates = filedialog.askopenfilename(filetypes=(('Word files', '*.docx'), ('all files', '*.*')))
+    name_file_template_certificates = filedialog.askopenfilename(
+        filetypes=(('Word files', '*.docx'), ('all files', '*.*')))
 
 
 def select_file_data_certificates():
@@ -245,14 +272,14 @@ def select_end_folder_certificates():
     path_to_end_folder_certificates = filedialog.askdirectory()
 
 
-
 def select_file_template_order_enroll():
     """
     Функция для выбора файла шаблона
     :return: Путь к файлу шаблона
     """
     global name_file_template_order_enroll
-    name_file_template_order_enroll = filedialog.askopenfilename(filetypes=(('Word files', '*.docx'), ('all files', '*.*')))
+    name_file_template_order_enroll = filedialog.askopenfilename(
+        filetypes=(('Word files', '*.docx'), ('all files', '*.*')))
 
 
 def select_file_data_order_enroll():
@@ -322,9 +349,6 @@ if __name__ == '__main__':
                                        command=generate_contracts
                                        )
     btn_create_files_contract.grid(column=0, row=4, padx=10, pady=10)
-
-
-
 
     # Создаем вкладку для создания приказов о зачислении
     tab_order_enroll = ttk.Frame(tab_control)
