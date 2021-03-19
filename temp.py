@@ -1,8 +1,7 @@
-from docxtpl import DocxTemplate
+c = 'Арелтуева Алина Андреевна'
+# c = 'НаранЦЭЦЭГ'
+# c = 'Ху Ляо'
 
-doc = DocxTemplate('resources/test_template.docx')
-tbl_contents = ['Cilian', 'Booth', 'Lindy']
+lastname,firstname,patr = c.split()
 
-context = {'tbl_contents':tbl_contents}
-doc.render(context)
-doc.save('Test.docx')
+print(' '.join([firstname,patr]))
