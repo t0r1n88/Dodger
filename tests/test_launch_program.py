@@ -2,11 +2,8 @@ from tkinter import *
 from tkinter import filedialog
 from tkinter import messagebox
 import pytest
+
 from dodger import *
-
-
-def test_example():
-    assert 'Lindy' in example()
 
 def test_create_window():
     """
@@ -15,5 +12,12 @@ def test_create_window():
     Тогда : заголовок программы должен содеражать название. Пока это самая простая проверка
     """
     window = create_window()
-    title = window.title
-    assert 'Dodger' in title()
+    assert 'Dodger' in window.title()
+
+def test_tabs_exists():
+    """
+    Дано: окно ткинтер со вкладками
+    Когда: программа запущена
+    Тогда: Все вкладки должны быть рабочими
+    """
+
