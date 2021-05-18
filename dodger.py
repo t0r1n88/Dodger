@@ -60,7 +60,8 @@ if __name__ == '__main__':
     window = ProgramWindow()
     window.add_tab('Создание свидетельств', 'Создать свидетельства')
     window.add_tab('Создание сертификатов', 'Создать сертификаты')
-    print(dir(window.tab_control))
+    window.tab_control.bind('<<NotebookTabChanged>>',print('Lindy Booth!!!'))
+    window.tab_control.bind('<<NotebookTabChanged>>', print('Lindy Booth!!!'))
 
 
     window.run()
