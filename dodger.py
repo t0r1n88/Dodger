@@ -11,7 +11,7 @@ class ProgramWindow:
     Класс для создания окна программы и элементов
     """
 
-    def __init__(self, title='Dodger',geometry='640x480+700+300'):
+    def __init__(self, title='Dodger', geometry='640x480+700+300'):
         # Создаем объект окна
         self.window = Tk()
         # Присваиваем имя окну
@@ -32,7 +32,7 @@ class ProgramWindow:
         self.tab_control.add(frame, text=title_tab)
         # Размещаем кнопку
         button = ttk.Button(frame, text=name_button)
-        button.grid(column=1, row=1,padx=10, pady=25)
+        button.grid(column=1, row=1, padx=10, pady=25)
         self.tab_control.pack(expand=1, fill='both')
 
     def run(self):
@@ -60,8 +60,7 @@ if __name__ == '__main__':
     window = ProgramWindow()
     window.add_tab('Создание свидетельств', 'Создать свидетельства')
     window.add_tab('Создание сертификатов', 'Создать сертификаты')
-    window.tab_control.bind('<<NotebookTabChanged>>',print('Lindy Booth!!!'))
-    window.tab_control.bind('<<NotebookTabChanged>>', print('Lindy Booth!!!'))
-
+    window.tab_control.bind('<<NotebookTabChanged>>')
+    window.tab_control.bind('<<NotebookTabChanged>>')
 
     window.run()

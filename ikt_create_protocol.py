@@ -1,7 +1,10 @@
 from docxtpl import DocxTemplate
-import csv
-from docx import Document as Document_compose
 import pandas as pd
+
+"""
+На будущее не забыть что максимальный балл может измениться и название этой колонки надо менять в зависимости от теста
+(максимальный балл может менятся и соответсвенно название колонки будет меняться)
+"""
 
 # Считываем датафрейм
 df = pd.read_excel('resources/ikt_temp.xlsx', usecols='A:K')
@@ -14,7 +17,6 @@ max_ball = float(trash_max_ball.replace(',', '.'))
 df['Оценка/25,00'] = df['Оценка/25,00'].str.replace(',', '.')
 df['Оценка/25,00'] = df['Оценка/25,00'].astype(float)
 # Итерируемся по датафрейму с помощью itertupples, понятнее получается
-
 for value in df.itertuples():
     doc = DocxTemplate('resources/Шаблон протокола на знание основ ИКТ.docx')
     fio = f'{value[1]} {value[2]}'
