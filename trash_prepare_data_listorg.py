@@ -78,7 +78,7 @@ def mining_phone(lst_text):
 
 
 for text in d:
-    lst_site = re.findall(r'[Сайт]{4}:\s(.+)',text)
-    print(lst_site)
+    lst_site = re.findall(r'[Сайт]{4}:\s(.+)\s',text)
+    print(','.join(lst_site))
 
 

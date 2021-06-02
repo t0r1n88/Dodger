@@ -1,7 +1,10 @@
 import pandas  as pd
-from datetime import datetime
 import re
+from styleframe import StyleFrame,Styler
 
+"""
+К слову вытаскивать все эти данные можно было и через регулярки
+"""
 
 def mining_okvad(text):
     """
@@ -45,14 +48,12 @@ def mining_phone(text):
 
 
 def mining_sait(text):
-    lst_text = text.split('\n')
-
-    for contact in lst_text:
-        if 'Сайт' in contact:
-            sait = contact.split(':')[1].strip()
-            return sait
-    # на случай если добрые верстальщики забудут прописать поле телефона
-    return ''
+    # Воспользуемся регулярками.Если сайтов несколько то склеим их в строку через join
+    lst_site = re.findall(r'[Сайт]{4}:\s(.+)',text)
+    if lst_site == []:
+        return ''
+    else:
+        return ','.join(lst_site)
 
 
 def mining_adress(text):
@@ -112,7 +113,7 @@ def processing_category(size_human):
 
 
 df = pd.read_excel('resources/data_list.xlsx')
-
+out_df = pd.read_excel('resources/out_list_org.xlsx')
 
 
 
@@ -131,9 +132,41 @@ df['Уставный капитал'] = df['Уставный капитал'].ap
 # Обрабатываем категории
 df['Категория'] = df['Численость персонала'].apply(processing_category)
 
-# Удаляем колонки
-out_df = df.drop(['Название','ОКВЭД','Краткая справка','Контакты','УСН'],axis=1)
-# Сохраняем датафрейм
-out_df.to_excel('out_df.xlsx',index=False)
 
-# [Сайт]{4}:\s(.+)
+
+# Удаляем колонки
+# Создаем базовый датафрейм
+base_df = df.drop(['Название','ОКВЭД','Краткая справка','Контакты','УСН'],axis=1)
+
+# Заполняем датафрейм для аналитиков
+# Зполняем подпункты последовательностью, конечную цифру берем из данных датафрейма
+# Не забываем что последовательность не включает в себя последнию цифру, поэтому и плюсуем 1
+out_df['№ п/п'] = range(1,base_df.shape[0]+1)
+out_df['Наименование предприятия/ организации'] = base_df['Юр.название']
+out_df['ИНН'] = base_df['ИНН']
+out_df['Основной вид экономической деятельности (по ОКВЭД 2)'] = base_df['ОКВЭД_чистый']
+out_df['Среднесписочная численность работников'] = base_df['Численость персонала']
+out_df['E-mail'] = base_df['E-mail']
+out_df['Контакты (ФИО телефон) приемной, службы управления персоналом'] = base_df['Телефон']
+
+# Используем библиотеку StyleFrame
+excel_writer = StyleFrame.ExcelWriter('CAPL_table_for_analysis.xlsx')
+sf = StyleFrame(out_df)
+
+sf.apply_style_by_indexes(sf[(sf['Среднесписочная численность работников'] <=15) & (sf['Среднесписочная численность работников'] >=1)],cols_to_style='Среднесписочная численность работников',
+                          styler_obj=Styler(bg_color='green'))
+
+sf.apply_style_by_indexes(sf[sf['Среднесписочная численность работников'] ==0],cols_to_style='Среднесписочная численность работников',
+                          styler_obj=Styler(bg_color='red'))
+
+sf.apply_style_by_indexes(sf[(sf['Среднесписочная численность работников'] >15) & (sf['Среднесписочная численность работников'] <=100)],cols_to_style='Среднесписочная численность работников',
+                          styler_obj=Styler(bg_color='orange'))
+sf.apply_style_by_indexes(sf[(sf['Среднесписочная численность работников'] >100) & (sf['Среднесписочная численность работников'] )],cols_to_style='Среднесписочная численность работников',
+                          styler_obj=Styler(bg_color='blue'))
+#
+#
+#
+sf.to_excel(excel_writer=excel_writer)
+excel_writer.save()
+# # out_df.to_excel('mintrud_df.xlsx',index=False)
+
