@@ -1,4 +1,6 @@
 import pandas as pd
+import re
+from datetime import datetime
 
 # Настройка чтобы можно было увидеть все колонки
 pd.set_option('display.max_columns', None)
@@ -17,6 +19,7 @@ def extract_main_data(text: str, key):
     dict_main_data = {row.split(':')[0]: row.split(':')[1].strip() for row in lst_main_data if ':' in row}
     # print(dict_main_data.items())
     return dict_main_data.get(key)
+
 
 def processing_capital(text):
     """
@@ -46,27 +49,140 @@ def processing_capital(text):
             return authorized_capital
     else:
         return 0
+
+
+def mining_sait(text):
+    # Воспользуемся регулярками.Если сайтов несколько то склеим их в строку через join
+    lst_site = re.findall(r'[Сайт]{4}:\s(.+)', text)
+    if lst_site == []:
+        return ''
+    else:
+        return ','.join(lst_site)
+
+
+def mining_okvad(text):
+    """
+    Функция для извлечения из текста значения ОКВЭД
+    :param text: сырой текст
+    :return: очищенный ОКВЭД
+    """
+    if 'title' in text:
+        result = text.split('>')[1].strip()
+    else:
+        result = text.split(':')[1].strip()
+    return result
+
+
+def extract_reg_msp(text: str):
+    """
+    Функция для извлечения сведений о том состоит ли организация в реестре МСП
+    :param text:
+    :return:
+    """
+    if text == 'Неопределенно':
+        return None
+    else:
+        tmp_lst = text.split(':')
+        date_reg = re.search(r'\d{2}.\d{2}.\d{4}', tmp_lst[1]).group()
+        return date_reg
+
+
+def extract_date_reg(text):
+    """
+    Функция для того чтобы извлечь дату регистрации в приемлимом виде.Поскольку rstrip лихо отрубает 0 у дат оканчивающихся на 0
+    :param text:
+    :return:
+    """
+    if text:
+        date_reg = re.search(r'\d{2}[.]\d{2}[.]\d{4}', text).group()
+        return date_reg
+    else:
+        return text
+
+
 # Загружаем таблицы с сырыми данными
 # dtype для инн установлен строкой чтобы лидирующий ноль не убирался при создании датафрейма
 base_df = pd.read_excel('resources/data_org.xlsx', dtype={'INN': str})
 
 # Создаем итоговый датафрейм с заранее определенными колонками
 df = pd.DataFrame(columns=['Организация', 'Юридическое наименование', 'ИНН', 'Руководитель', 'Уставной капитал',
-                           'Численность персонал', 'Количество учредителей', 'Дата регистрации', 'Статус'])
+                           'Численность персонала', 'Количество учредителей', 'Дата регистрации', 'Статус',
+                           'ОКВЭД', 'Состоит в реестре МСП', 'Дата регистрации в реестр МСП', 'Индекс',
+                           'Адрес',
+                           'Координаты', 'Юридический адрес', 'Телефон', 'Факс', 'E-mail', 'Сайт', 'ИНН',
+                           'КПП', 'ОКПО', 'ОГРН', 'ОКФС', 'ОКОГУ', 'ОКОПФ', 'ОКТМО', 'ФСФР', 'ОКАТО',
+                           'Предприятия рядом'])
 
-# Записываем данные из столбцов Name и ИНН в итогоый датафрейм
+# Обработка данных из столбца Main_data содержащего в себе основную информацию
 df['Организация'] = base_df['Name']
 # Возникли небольшие трудности с передачей аргументов в функцию, но вспомнил зато как работать с кортежами
 df['Юридическое наименование'] = base_df['Main_data'].apply(extract_main_data,
                                                             args=('Полное юридическое наименование',))
+
 df['ИНН'] = base_df['INN']
 df['Руководитель'] = base_df['Main_data'].apply(extract_main_data, args=('Руководитель',))
-# Теперь нужно очистить столбец Руководитель от наименование должности оставив только ФИС
+# Теперь нужно очистить столбец Руководитель от наименование должности оставив только ФИО
 # df['Руководитель'] = df['Руководитель'].apply(lambda x:x.upper().split('ДИРЕКТОР') if 'ДИРЕКТОР' in x.upper())
 # Хотя можно сделать все намного проще и просто оставлять последие 3 слова
 df['Руководитель'] = df['Руководитель'].apply(lambda x: ' '.join(x.split()[-3:]))
 df['Уставной капитал'] = base_df['Main_data'].apply(extract_main_data, args=('Уставной капитал',))
 # Обрабатываем колонку уставный капитал конвертируя ее в число
 df['Уставной капитал'] = df['Уставной капитал'].apply(processing_capital)
-print(df[['Организация', 'Юридическое наименование', 'ИНН', 'Руководитель', 'Уставной капитал']].head())
-# df.to_excel('База данных организаций Бурятии.xlsx',index=False)
+# Обрабатываем колонку численость персонала
+df['Численность персонала'] = base_df['Main_data'].apply(extract_main_data, args=('Численность персонала',))
+df['Количество учредителей'] = base_df['Main_data'].apply(extract_main_data, args=('Количество учредителей',))
+df['Дата регистрации'] = base_df['Main_data'].apply(extract_date_reg)
+# df['Дата регистрации'] = base_df['Main_data'].apply(extract_main_data, args=('Дата регистрации',))
+# df['Дата регистрации'] = df['Дата регистрации'].apply(lambda x: x.rstrip('_x000D_') if x else x)
+# df['Дата регистрации'] = pd.to_datetime(df['Дата регистрации'])
+df['Дата регистрации'] = df['Дата регистрации'].apply(lambda x: datetime.strptime(x, '%d.%m.%Y'))
+df['Статус'] = base_df['Main_data'].apply(extract_main_data, args=('Статус',))
+
+# Обработка данных из столбца Contacts
+df['Индекс'] = base_df['Contacts'].apply(extract_main_data, args=('Индекс',))
+df['Адрес'] = base_df['Contacts'].apply(extract_main_data, args=('Адрес',))
+df['Координаты'] = base_df['Contacts'].apply(extract_main_data, args=('Координаты',))
+df['Юридический адрес'] = base_df['Contacts'].apply(extract_main_data, args=('Юридический адрес',))
+df['Телефон'] = base_df['Contacts'].apply(extract_main_data, args=('Телефон',))
+df['Факс'] = base_df['Contacts'].apply(extract_main_data, args=('Факс',))
+df['E-mail'] = base_df['Contacts'].apply(extract_main_data, args=('E-mail',))
+df['Сайт'] = base_df['Contacts'].apply(mining_sait)
+
+# Обрабатываем ОКВЭД
+df['ОКВЭД'] = base_df['Okvad'].apply(mining_okvad)
+
+# Обрабатываем данные из столбца  Reest, означающие есть ли организация в реестре малых или средних предприятий.
+df['Состоит в реестре МСП'] = base_df['Reestr'].apply(lambda x: 'Нет' if x == 'Неопределенно' else 'ДА')
+df['Дата регистрации в реестр МСП'] = base_df['Reestr'].apply(extract_reg_msp)
+df['Дата регистрации в реестр МСП'] = pd.to_datetime(df['Дата регистрации в реестр МСП'], format='%d.%m.%Y')
+
+# # Обработка данных из столбца реквизиты
+# df['КПП'] = base_df['Rekvizit'].apply(extract_main_data,args=('КПП',))
+# df['ОКПО'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКПО',))
+# df['ОГРН'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОГРН',))
+# df['ОКФС'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКФС',))
+# df['ОКОГУ'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКОГУ',))
+# df['ОКОПФ'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКОПФ',))
+# df['ОКТМО'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКТМО',))
+# df['ФСФР'] = base_df['Rekvizit'].apply(extract_main_data,args=('ФСФР',))
+# df['ОКАТО'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКАТО',))
+# df['Предприятия рядом'] = base_df['Rekvizit'].apply(extract_main_data,args=('Предприятия рядом',))
+# # Убираем словосочетание - Посмотреть все на карте чтобы оставить только названия рядом находящихся предприятий.
+# # Может быть попробую потом побаловатся кластерами и прочими вещами
+# df['Предприятия рядом'] = df['Предприятия рядом'].apply(lambda x:x.rstrip('- Посмотреть все на карте') if x else x)
+
+
+"""
+'ИНН',
+                           'КПП', 'ОКПО', 'ОГРН', 'ОКФС', 'ОКОГУ', 'ОКОПФ', 'ОКТМО', 'ФСФР', 'ОКАТО',
+                           'Предприятия рядом'])"""
+
+print(df.dtypes)
+# К слову надо все таки запомнить разницу между apply и applymap
+# df = df.applymap(lambda x: x.rstrip('_x000D_') if type(x) == str else x)
+
+print(df.head())
+# print(df[['Организация', 'Юридическое наименование', 'ИНН', 'Руководитель', 'Уставной капитал', 'Численость персонала',
+#           'Количество учредителей', 'Дата регистрации', 'Статус', 'Индекс',
+#           'Адрес', 'Координаты', 'Юридический адрес', 'Телефон', 'Факс', 'E-mail', 'Сайт']].head())
+df.to_excel('База данных организаций Бурятии.xlsx', index=False)
