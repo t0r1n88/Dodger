@@ -106,24 +106,42 @@ def extract_date_reg(text):
         return None
 
 
+def processing_category(size_human):
+    """Функция для установки категории в зависимости от численности персонала
+     5 категорий: микропредприятие, малое,среднее,большое,данные отсутствуют"""
+    if size_human == 0:
+        return 'Данные отсутствуют'
+    elif size_human <= 15:
+        return 'Микропредприятие'
+    elif size_human <= 100:
+        return 'Малое предприятие'
+    elif size_human <= 250:
+        return 'Среднее предприятие'
+    else:
+        return 'Большое предприятие'
+
+
 # Загружаем таблицы с сырыми данными
 # dtype для инн установлен строкой чтобы лидирующий ноль не убирался при создании датафрейма
 base_df = pd.read_excel('resources/data_org.xlsx', dtype={'INN': str})
 
 # Создаем итоговый датафрейм с заранее определенными колонками
 df = pd.DataFrame(columns=['Организация', 'Юридическое наименование', 'ИНН', 'Руководитель', 'Уставной капитал',
-                           'Численность персонала', 'Количество учредителей', 'Дата регистрации', 'Статус',
-                           'ОКВЭД', 'Состоит в реестре МСП', 'Дата регистрации в реестр МСП','Специальные налоговые режимы', 'Индекс',
+                           'Численность персонала', 'Категория организации', 'Количество учредителей',
+                           'Дата регистрации', 'Статус',
+                           'ОКВЭД', 'Состоит в реестре МСП', 'Дата регистрации в реестр МСП',
+                           'Специальные налоговые режимы', 'Индекс',
                            'Адрес',
                            'Координаты', 'Юридический адрес', 'Телефон', 'Факс', 'E-mail', 'Сайт',
                            'КПП', 'ОКПО', 'ОГРН', 'ОКФС', 'ОКОГУ', 'ОКОПФ', 'ОКТМО', 'ФСФР', 'ОКАТО',
                            'Предприятия рядом'])
 
-# Удаляем строки  в которых вообще нет значений.
-base_df.dropna(inplace=True,axis=0,how='all')
+# Удаляем строки  в которых вообще нет значений(т.е. пустые во всех колонках).
+base_df.dropna(inplace=True, axis=0, how='all')
 
 # Обработка данных из столбца Main_data содержащего в себе основную информацию
-df['Организация'] = base_df['Name']
+# Убираем слово организация
+df['Организация'] = base_df['Name'].apply(lambda x: (x.replace('Организация', '')).strip())
 # Возникли небольшие трудности с передачей аргументов в функцию, но вспомнил зато как работать с кортежами
 df['Юридическое наименование'] = base_df['Main_data'].apply(extract_main_data,
                                                             args=('Полное юридическое наименование',))
@@ -134,9 +152,22 @@ df['Руководитель'] = df['Руководитель'].apply(lambda x: 
 df['Уставной капитал'] = base_df['Main_data'].apply(extract_main_data, args=('Уставной капитал',))
 # Обрабатываем колонку уставный капитал конвертируя ее в число
 df['Уставной капитал'] = df['Уставной капитал'].apply(processing_capital)
-# Обрабатываем колонку численость персонала
+# Обрабатываем колонку численость персонала конвертируя ее в числовой формат
 df['Численность персонала'] = base_df['Main_data'].apply(extract_main_data, args=('Численность персонала',))
+
+df['Численность персонала'] = df['Численность персонала'].apply(
+    lambda x: x.rstrip('_x000D_') if type(x) == str else '0')
+df['Численность персонала'] = df['Численность персонала'].astype(int)
+
+# Добавляем колонку с категорией организации для более удобной группировки
+df['Категория организации'] = df['Численность персонала'].apply(processing_category)
+
+# Обрабатываем колонку количество учредителей конвертируя ее в числовой формат
 df['Количество учредителей'] = base_df['Main_data'].apply(extract_main_data, args=('Количество учредителей',))
+df['Количество учредителей'] = df['Количество учредителей'].apply(
+    lambda x: x.rstrip('_x000D_') if type(x) == str else '0')
+df['Количество учредителей'] = df['Количество учредителей'].astype(int)
+
 df['Дата регистрации'] = base_df['Main_data'].apply(extract_date_reg)
 # df['Дата регистрации'] = df['Дата регистрации'].apply(lambda x: x.rstrip('_x000D_') if x else x)
 df['Дата регистрации'] = pd.to_datetime(df['Дата регистрации'])
@@ -160,28 +191,27 @@ df['ОКВЭД'] = base_df['Okvad'].apply(mining_okvad)
 df['Состоит в реестре МСП'] = base_df['Reestr'].apply(lambda x: 'Нет' if x == 'Неопределенно' else 'Да')
 df['Дата регистрации в реестр МСП'] = base_df['Reestr'].apply(extract_reg_msp)
 df['Дата регистрации в реестр МСП'] = pd.to_datetime(df['Дата регистрации в реестр МСП'], format='%d.%m.%Y')
-df['Специальные налоговые режимы'] = base_df['Main_data'].apply(extract_main_data,args=('Специальные налоговые режимы',))
+df['Специальные налоговые режимы'] = base_df['Main_data'].apply(extract_main_data,
+                                                                args=('Специальные налоговые режимы',))
 
 # Обработка данных из столбца реквизиты
-df['КПП'] = base_df['Rekvizit'].apply(extract_main_data,args=('КПП',))
-df['ОКПО'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКПО',))
-df['ОГРН'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОГРН',))
-df['ОКФС'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКФС',))
-df['ОКОГУ'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКОГУ',))
-df['ОКОПФ'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКОПФ',))
-df['ОКТМО'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКТМО',))
-df['ФСФР'] = base_df['Rekvizit'].apply(extract_main_data,args=('ФСФР',))
-df['ОКАТО'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКАТО',))
-df['Предприятия рядом'] = base_df['Rekvizit'].apply(extract_main_data,args=('Предприятия рядом',))
+df['КПП'] = base_df['Rekvizit'].apply(extract_main_data, args=('КПП',))
+df['ОКПО'] = base_df['Rekvizit'].apply(extract_main_data, args=('ОКПО',))
+df['ОГРН'] = base_df['Rekvizit'].apply(extract_main_data, args=('ОГРН',))
+df['ОКФС'] = base_df['Rekvizit'].apply(extract_main_data, args=('ОКФС',))
+df['ОКОГУ'] = base_df['Rekvizit'].apply(extract_main_data, args=('ОКОГУ',))
+df['ОКОПФ'] = base_df['Rekvizit'].apply(extract_main_data, args=('ОКОПФ',))
+df['ОКТМО'] = base_df['Rekvizit'].apply(extract_main_data, args=('ОКТМО',))
+df['ФСФР'] = base_df['Rekvizit'].apply(extract_main_data, args=('ФСФР',))
+df['ОКАТО'] = base_df['Rekvizit'].apply(extract_main_data, args=('ОКАТО',))
+df['Предприятия рядом'] = base_df['Rekvizit'].apply(extract_main_data, args=('Предприятия рядом',))
 # Убираем словосочетание - Посмотреть все на карте чтобы оставить только названия рядом находящихся предприятий.
 # Может быть попробую потом побаловатся кластерами и прочими вещами
-df['Предприятия рядом'] = df['Предприятия рядом'].apply(lambda x:x.rstrip('- Посмотреть все на карте') if x else x)
+df['Предприятия рядом'] = df['Предприятия рядом'].apply(lambda x: x.rstrip('- Посмотреть все на карте') if x else x)
 
-
-print(df.dtypes)
 # К слову надо все таки запомнить разницу между apply и applymap
 df = df.applymap(lambda x: x.rstrip('_x000D_') if type(x) == str else x)
 
-print(df.head())
-
+existing_org_df = df[df['Статус'] == 'Действующее']
+existing_org_df.to_excel('Действующие организации.xlsx', index=False)
 df.to_excel('База данных организаций Бурятии.xlsx', index=False)
