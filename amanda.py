@@ -66,7 +66,9 @@ def mining_okvad(text):
     :param text: сырой текст
     :return: очищенный ОКВЭД
     """
-    if 'title' in text:
+    if text == 'Неопределенно':
+        return text
+    elif 'title' in text:
         result = text.split('>')[1].strip()
     else:
         result = text.split(':')[1].strip()
@@ -93,11 +95,15 @@ def extract_date_reg(text):
     :param text:
     :return:
     """
+
     if text:
-        date_reg = re.search(r'\d{2}[.]\d{2}[.]\d{4}', text).group()
-        return date_reg
+        date_reg = re.search(r'\d{2}[.]\d{2}[.]\d{4}', text)
+        if date_reg:
+            return date_reg.group()
+        else:
+            return None
     else:
-        return text
+        return None
 
 
 # Загружаем таблицы с сырыми данными
@@ -107,11 +113,14 @@ base_df = pd.read_excel('resources/data_org.xlsx', dtype={'INN': str})
 # Создаем итоговый датафрейм с заранее определенными колонками
 df = pd.DataFrame(columns=['Организация', 'Юридическое наименование', 'ИНН', 'Руководитель', 'Уставной капитал',
                            'Численность персонала', 'Количество учредителей', 'Дата регистрации', 'Статус',
-                           'ОКВЭД', 'Состоит в реестре МСП', 'Дата регистрации в реестр МСП', 'Индекс',
+                           'ОКВЭД', 'Состоит в реестре МСП', 'Дата регистрации в реестр МСП','Специальные налоговые режимы', 'Индекс',
                            'Адрес',
-                           'Координаты', 'Юридический адрес', 'Телефон', 'Факс', 'E-mail', 'Сайт', 'ИНН',
+                           'Координаты', 'Юридический адрес', 'Телефон', 'Факс', 'E-mail', 'Сайт',
                            'КПП', 'ОКПО', 'ОГРН', 'ОКФС', 'ОКОГУ', 'ОКОПФ', 'ОКТМО', 'ФСФР', 'ОКАТО',
                            'Предприятия рядом'])
+
+# Удаляем строки  в которых вообще нет значений.
+base_df.dropna(inplace=True,axis=0,how='all')
 
 # Обработка данных из столбца Main_data содержащего в себе основную информацию
 df['Организация'] = base_df['Name']
@@ -121,9 +130,6 @@ df['Юридическое наименование'] = base_df['Main_data'].app
 
 df['ИНН'] = base_df['INN']
 df['Руководитель'] = base_df['Main_data'].apply(extract_main_data, args=('Руководитель',))
-# Теперь нужно очистить столбец Руководитель от наименование должности оставив только ФИО
-# df['Руководитель'] = df['Руководитель'].apply(lambda x:x.upper().split('ДИРЕКТОР') if 'ДИРЕКТОР' in x.upper())
-# Хотя можно сделать все намного проще и просто оставлять последие 3 слова
 df['Руководитель'] = df['Руководитель'].apply(lambda x: ' '.join(x.split()[-3:]))
 df['Уставной капитал'] = base_df['Main_data'].apply(extract_main_data, args=('Уставной капитал',))
 # Обрабатываем колонку уставный капитал конвертируя ее в число
@@ -132,16 +138,15 @@ df['Уставной капитал'] = df['Уставной капитал'].ap
 df['Численность персонала'] = base_df['Main_data'].apply(extract_main_data, args=('Численность персонала',))
 df['Количество учредителей'] = base_df['Main_data'].apply(extract_main_data, args=('Количество учредителей',))
 df['Дата регистрации'] = base_df['Main_data'].apply(extract_date_reg)
-# df['Дата регистрации'] = base_df['Main_data'].apply(extract_main_data, args=('Дата регистрации',))
 # df['Дата регистрации'] = df['Дата регистрации'].apply(lambda x: x.rstrip('_x000D_') if x else x)
-# df['Дата регистрации'] = pd.to_datetime(df['Дата регистрации'])
-df['Дата регистрации'] = df['Дата регистрации'].apply(lambda x: datetime.strptime(x, '%d.%m.%Y'))
+df['Дата регистрации'] = pd.to_datetime(df['Дата регистрации'])
+# df['Дата регистрации'] = df['Дата регистрации'].apply(lambda x: datetime.strptime(x, '%d.%m.%Y'))
 df['Статус'] = base_df['Main_data'].apply(extract_main_data, args=('Статус',))
 
 # Обработка данных из столбца Contacts
 df['Индекс'] = base_df['Contacts'].apply(extract_main_data, args=('Индекс',))
 df['Адрес'] = base_df['Contacts'].apply(extract_main_data, args=('Адрес',))
-df['Координаты'] = base_df['Contacts'].apply(extract_main_data, args=('Координаты',))
+df['Координаты'] = base_df['Contacts'].apply(extract_main_data, args=('GPS координаты',))
 df['Юридический адрес'] = base_df['Contacts'].apply(extract_main_data, args=('Юридический адрес',))
 df['Телефон'] = base_df['Contacts'].apply(extract_main_data, args=('Телефон',))
 df['Факс'] = base_df['Contacts'].apply(extract_main_data, args=('Факс',))
@@ -152,37 +157,31 @@ df['Сайт'] = base_df['Contacts'].apply(mining_sait)
 df['ОКВЭД'] = base_df['Okvad'].apply(mining_okvad)
 
 # Обрабатываем данные из столбца  Reest, означающие есть ли организация в реестре малых или средних предприятий.
-df['Состоит в реестре МСП'] = base_df['Reestr'].apply(lambda x: 'Нет' if x == 'Неопределенно' else 'ДА')
+df['Состоит в реестре МСП'] = base_df['Reestr'].apply(lambda x: 'Нет' if x == 'Неопределенно' else 'Да')
 df['Дата регистрации в реестр МСП'] = base_df['Reestr'].apply(extract_reg_msp)
 df['Дата регистрации в реестр МСП'] = pd.to_datetime(df['Дата регистрации в реестр МСП'], format='%d.%m.%Y')
+df['Специальные налоговые режимы'] = base_df['Main_data'].apply(extract_main_data,args=('Специальные налоговые режимы',))
 
-# # Обработка данных из столбца реквизиты
-# df['КПП'] = base_df['Rekvizit'].apply(extract_main_data,args=('КПП',))
-# df['ОКПО'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКПО',))
-# df['ОГРН'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОГРН',))
-# df['ОКФС'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКФС',))
-# df['ОКОГУ'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКОГУ',))
-# df['ОКОПФ'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКОПФ',))
-# df['ОКТМО'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКТМО',))
-# df['ФСФР'] = base_df['Rekvizit'].apply(extract_main_data,args=('ФСФР',))
-# df['ОКАТО'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКАТО',))
-# df['Предприятия рядом'] = base_df['Rekvizit'].apply(extract_main_data,args=('Предприятия рядом',))
-# # Убираем словосочетание - Посмотреть все на карте чтобы оставить только названия рядом находящихся предприятий.
-# # Может быть попробую потом побаловатся кластерами и прочими вещами
-# df['Предприятия рядом'] = df['Предприятия рядом'].apply(lambda x:x.rstrip('- Посмотреть все на карте') if x else x)
+# Обработка данных из столбца реквизиты
+df['КПП'] = base_df['Rekvizit'].apply(extract_main_data,args=('КПП',))
+df['ОКПО'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКПО',))
+df['ОГРН'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОГРН',))
+df['ОКФС'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКФС',))
+df['ОКОГУ'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКОГУ',))
+df['ОКОПФ'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКОПФ',))
+df['ОКТМО'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКТМО',))
+df['ФСФР'] = base_df['Rekvizit'].apply(extract_main_data,args=('ФСФР',))
+df['ОКАТО'] = base_df['Rekvizit'].apply(extract_main_data,args=('ОКАТО',))
+df['Предприятия рядом'] = base_df['Rekvizit'].apply(extract_main_data,args=('Предприятия рядом',))
+# Убираем словосочетание - Посмотреть все на карте чтобы оставить только названия рядом находящихся предприятий.
+# Может быть попробую потом побаловатся кластерами и прочими вещами
+df['Предприятия рядом'] = df['Предприятия рядом'].apply(lambda x:x.rstrip('- Посмотреть все на карте') if x else x)
 
-
-"""
-'ИНН',
-                           'КПП', 'ОКПО', 'ОГРН', 'ОКФС', 'ОКОГУ', 'ОКОПФ', 'ОКТМО', 'ФСФР', 'ОКАТО',
-                           'Предприятия рядом'])"""
 
 print(df.dtypes)
 # К слову надо все таки запомнить разницу между apply и applymap
-# df = df.applymap(lambda x: x.rstrip('_x000D_') if type(x) == str else x)
+df = df.applymap(lambda x: x.rstrip('_x000D_') if type(x) == str else x)
 
 print(df.head())
-# print(df[['Организация', 'Юридическое наименование', 'ИНН', 'Руководитель', 'Уставной капитал', 'Численость персонала',
-#           'Количество учредителей', 'Дата регистрации', 'Статус', 'Индекс',
-#           'Адрес', 'Координаты', 'Юридический адрес', 'Телефон', 'Факс', 'E-mail', 'Сайт']].head())
+
 df.to_excel('База данных организаций Бурятии.xlsx', index=False)
