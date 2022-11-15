@@ -24,6 +24,8 @@ temp_dir = 'C:/temp/'
 path_to_end = 'C:/Данные/'
 # Get date, subject and body len of all emails from INBOX folder
 not_used = ['Спам','Отправленные','Черновики','Корзина']
+cols_df = list(range(23))
+df = pd.DataFrame(columns=cols_df)
 
 
 with MailBox('imap.mail.ru').login('myschool@copp03.ru', 'irjkf@_22') as mailbox:
@@ -48,15 +50,30 @@ with MailBox('imap.mail.ru').login('myschool@copp03.ru', 'irjkf@_22') as mailbox
 
                         check_file = getMergedCellVal(wb[first_list], wb[first_list]['L2']) # получаем значение ячейки,если совпадает то файл нужный нам
                         if check_file == standard_str:
-                            name_org = wb[first_list]['B5'].value # получаем значение ячейки B5
+                            if len(wb.sheetnames) == 1: # Проверяем длину
+                                name_org = wb[first_list]['B5'].value # получаем значение ячейки B5
+                                print(name_org)
+                                temp_df = pd.read_excel(f'{temp_dir}{att.filename}',skiprows=4,header=None) # считываем датафрейм
+                                temp_df[0] = msg_from
+                            else:
+                                len_sheets = len(wb.sheetnames)
+                                temp_df = pd.DataFrame(columns=list(range(23)))
+                                for sheet in wb.sheetnames:
+                                    ml_temp_df = pd.read_excel(f'{temp_dir}{att.filename}',sheet_name=sheet,skiprows=4,header=None)
+                                    try:
+                                        check_cols = ml_temp_df.iloc[:,1].any() # если есть хоть одно значение в колоноке 1 то добавляем эти данные
+                                        if check_cols:
+                                            ml_temp_df[0] = msg_from
+                                            temp_df=pd.concat([temp_df,ml_temp_df],ignore_index=True)
+                                    except IndexError:
+                                        continue
 
-                            print(name_org)
-                            temp_df = pd.read_excel(f'{temp_dir}{att.filename}',skiprows=4,header=None) # считываем датафрейм
+                            df = pd.concat([df,temp_df],ignore_index=True)
 
                             if name_org: # Сохраняем файл если есть имя организации
                                 name_org = name_org.translate(str.maketrans('','',string.punctuation)) # удаляем знаки препинания,которые могут помешать сохранить файлы
                                 wb.save(f'{path_to_end}{name_org}.xlsx') # Сохраняем файл под названием организации
-                            else:
+                            else: # если не заполнено то сохраняем под емайлом откуда прислан файл.
                                 wb.save(f'{path_to_end}{msg_from}.xlsx')
                         #
                         #
@@ -72,6 +89,6 @@ with MailBox('imap.mail.ru').login('myschool@copp03.ru', 'irjkf@_22') as mailbox
                         os.remove(f'{temp_dir}{att.filename}') # удаляем файл xls чтобы не мешался
                     else:
                         continue
-#
-
+df.rename(columns={0:'Откуда прислан файл',1:'Название учреждения'},inplace=True)
+df.to_excel('Тест.xlsx',index=False)
 
