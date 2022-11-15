@@ -5,6 +5,14 @@ from tkinter import *
 from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import ttk
+import string
+
+from imap_tools import MailBox, AND
+from xls2xlsx import XLS2XLSX
+import os
+from openpyxl import load_workbook
+import pandas as pd
+import tempfile
 import time
 # pd.options.mode.chained_assignment = None  # default='warn'
 import warnings
@@ -23,48 +31,23 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-def select_folder_data():
-    """
-    Функция для выбора папки c данными
-    :return:
-    """
-    global path_folder_data
-    path_folder_data = filedialog.askdirectory()
 
 def select_end_folder():
     """
     Функция для выбора конечной папки куда будут складываться итоговые файлы
     :return:
     """
-    global path_to_end_folder
-    path_to_end_folder = filedialog.askdirectory()
+    global path_to_end
+    path_to_end = filedialog.askdirectory()
 
-def select_file_docx():
-    """
-    Функция для выбора файла Word
-    :return: Путь к файлу шаблона
-    """
-    global file_docx
-    file_docx = filedialog.askopenfilename(
-        filetypes=(('Word files', '*.docx'), ('all files', '*.*')))
 
-def select_file_data_xlsx():
+def getMergedCellVal(sheet, cell):
     """
-    Функция для выбора файла с данными на основе которых будет генерироваться документ
-    :return: Путь к файлу с данными
+    Функция для получения значения объединеной ячейки
+    Взято отсюда https://stackoverflow.com/questions/23562366/how-to-get-value-present-in-a-merged-cell
     """
-    global file_data_xlsx
-    # Получаем путь к файлу
-    file_data_xlsx = filedialog.askopenfilename(filetypes=(('Excel files', '*.xlsx'), ('all files', '*.*')))
-
-def select_files_data_xlsx():
-    """
-    Функция для выбора нескоьких файлов с данными на основе которых будет генерироваться документ
-    :return: Путь к файлу с данными
-    """
-    global files_data_xlsx
-    # Получаем путь файлы
-    files_data_xlsx = filedialog.askopenfilenames(filetypes=(('Excel files', '*.xlsx'), ('all files', '*.*')))
+    rng = [s for s in sheet.merged_cells.ranges if cell.coordinate in s]
+    return sheet.cell(rng[0].min_row, rng[0].min_col).value if len(rng)!=0 else cell.value
 
 
 def processing_data():
@@ -72,13 +55,100 @@ def processing_data():
     Фугкция для обработки данных
     :return:
     """
-    pass
+    not_used = ['Спам', 'Отправленные', 'Черновики', 'Корзина']
+    cols_df = list(range(23))
+    df = pd.DataFrame(columns=cols_df)
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+
+        with MailBox('imap.mail.ru').login('myschool@copp03.ru', 'irjkf@_22') as mailbox:
+            for f in mailbox.folder.list():
+                if f.name not in not_used:
+                    mailbox.folder.set(f.name)
+                    for msg in mailbox.fetch():
+                        # print(f' Subject {msg.subject}') # заголовок письма
+                        # print(f' From {msg.from_}') # адрес почты отправителя
+                        # print(f' Date {msg.date}') # время отправки
+                        #
+                        # print('***************')
+                        msg_from = msg.from_  # получаем адрес почты отправителя
+                        for att in msg.attachments:
+                            if att.filename.endswith('.xlsx') or att.filename.endswith(
+                                    '.xls'):  # проверяем на расширение
+
+                                # work_file_name = att.filename.replace('.xls', '') # получаем название файла для варианта с xls
+                                # print(work_file_name)
+                                if att.filename.endswith('.xlsx'):  # Сохраняем во временную папку
+                                    work_file_name = att.filename
+                                    with open(f'{temp_dir}{att.filename}', 'wb') as f:
+                                        f.write(att.payload)
+                                elif att.filename.endswith('.xls'):  # конвертируем и сохраняем
+                                    work_file_name = att.filename.replace('.xls', '.xlsx')
+                                    with open(f'{temp_dir}{att.filename}', 'wb') as f:
+                                        f.write(att.payload)
+                                    out = XLS2XLSX(f'{temp_dir}{att.filename}')  # конвертируем в xlsx
+                                    out.to_xlsx((f'{temp_dir}{work_file_name}'))  # сохраняем
+                                    os.remove(f'{temp_dir}{att.filename}')  # удаляем файл xls чтобы не мешался
+
+                                wb = load_workbook(f'{temp_dir}{work_file_name}')
+
+                                # if att.filename.endswith('.xlsx'):
+                                #     wb = load_workbook(f'{temp_dir}{att.filename}') # Загружаем созданный файл в режиме чтения
+                                # else:
+                                #     wb = load_workbook(f'{temp_dir}{file_name}.xlsx')
+                                first_list = wb.sheetnames[0]  # получаем первый лист
+                                standard_str = 'На обработку моих персональных данных в целях подключения к Личному кабинету в gosuslugi.ru:'  # проверочная строка
+
+                                check_file = getMergedCellVal(wb[first_list], wb[first_list][
+                                    'L2'])  # получаем значение ячейки,если совпадает то файл нужный нам
+                                if check_file == standard_str:
+                                    if len(wb.sheetnames) == 1:  # Проверяем длину
+                                        name_org = wb[first_list]['B5'].value  # получаем значение ячейки B5
+                                        print(name_org)
+                                        temp_df = pd.read_excel(f'{temp_dir}{work_file_name}', skiprows=4,
+                                                                header=None)  # считываем датафрейм
+                                        temp_df[0] = msg_from
+                                    else:
+                                        len_sheets = len(wb.sheetnames)
+                                        temp_df = pd.DataFrame(columns=list(range(23)))
+                                        for sheet in wb.sheetnames:
+                                            ml_temp_df = pd.read_excel(f'{temp_dir}{work_file_name}', sheet_name=sheet,
+                                                                       skiprows=4, header=None)
+                                            try:
+                                                check_cols = ml_temp_df.iloc[:,
+                                                             1].any()  # если есть хоть одно значение в колоноке 1 то добавляем эти данные
+                                                if check_cols:
+                                                    ml_temp_df[0] = msg_from
+                                                    temp_df = pd.concat([temp_df, ml_temp_df], ignore_index=True)
+                                            except IndexError:
+                                                continue
+
+                                    df = pd.concat([df, temp_df], ignore_index=True)
+
+                                    if name_org:  # Сохраняем файл если есть имя организации
+                                        name_org = name_org.translate(str.maketrans('', '',
+                                                                                    string.punctuation))  # удаляем знаки препинания,которые могут помешать сохранить файлы
+                                        wb.save(
+                                            f'{path_to_end}/{name_org}.xlsx')  # Сохраняем файл под названием организации
+                                    else:  # если не заполнено то сохраняем под емайлом откуда прислан файл.
+                                        wb.save(f'{path_to_end}/{msg_from}.xlsx')
+
+                            else:
+                                continue
+
+    t = time.localtime()
+    current_time = time.strftime('%H_%M_%S', t)
+
+    df.rename(columns={0: 'Откуда прислан файл', 1: 'Название учреждения'}, inplace=True)
+    df.to_excel(f'{path_to_end}/Данные организаций для ФГИС Моя Школа от {current_time}.xlsx', index=False)
+    messagebox.showinfo(message='Обработка завершена успешно!!!')
+
 
 
 if __name__ == '__main__':
     window = Tk()
     window.title('ЦОПП Бурятия')
-    window.geometry('700x860')
+    window.geometry('700x560')
     window.resizable(False, False)
 
 
@@ -104,22 +174,14 @@ if __name__ == '__main__':
           image=img
           ).grid(column=1, row=0, padx=10, pady=25)
 
-    # Создаем кнопку Выбрать файл с данными
-    btn_choose_data = Button(tab_report_6, text='1) Выберите файлы с данными', font=('Arial Bold', 20),
-                          command=select_files_data_xlsx
-                          )
-    btn_choose_data.grid(column=0, row=2, padx=10, pady=10)
-
-    # Создаем кнопку для выбора папки куда будут генерироваться файлы
-
-    btn_choose_end_folder = Button(tab_report_6, text='2) Выберите конечную папку', font=('Arial Bold', 20),
+    btn_choose_end_folder = Button(tab_report_6, text='1) Выберите конечную папку', font=('Arial Bold', 20),
                                        command=select_end_folder
                                        )
     btn_choose_end_folder.grid(column=0, row=3, padx=10, pady=10)
 
     #Создаем кнопку обработки данных
 
-    btn_proccessing_data = Button(tab_report_6, text='3) Обработать данные', font=('Arial Bold', 20),
+    btn_proccessing_data = Button(tab_report_6, text='2) Получить данные', font=('Arial Bold', 20),
                                        command=processing_data
                                        )
     btn_proccessing_data.grid(column=0, row=4, padx=10, pady=10)
