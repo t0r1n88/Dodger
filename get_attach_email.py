@@ -30,6 +30,18 @@ not_used = ['Спам','Отправленные','Черновики','Корз
 cols_df = list(range(23))
 df = pd.DataFrame(columns=cols_df) # базовый датафрейм
 us_df = pd.DataFrame(columns=['Откуда прислан файл','Название файла','Время отправки','Тип ошибки']) # Датафрейм для неправильных файлов
+dir_files_org = 'Присланные формы ФГИС по организациям' # название папки куда будут сохраняться скачанные формы
+dir_files_other_excel = 'Файлы Excel не соответствующие форме'
+dir_other_files = 'Файлы с другими форматами'
+if not os.path.exists(f'{path_to_end}{dir_files_org}'): # проверяем наличие папки
+    os.makedirs(f'{path_to_end}{dir_files_org}') # если ее нет то создаем
+
+if not os.path.exists(f'{path_to_end}{dir_files_other_excel}'): # проверяем наличие папки
+    os.makedirs(f'{path_to_end}{dir_files_other_excel}') # если ее нет то создаем
+
+if not os.path.exists(f'{path_to_end}{dir_other_files}'):  # проверяем наличие папки
+    os.makedirs(f'{path_to_end}{dir_other_files}')  # если ее нет то создаем
+
 
 with tempfile.TemporaryDirectory() as temp_dir:
 
@@ -49,10 +61,8 @@ with tempfile.TemporaryDirectory() as temp_dir:
                     for att in msg.attachments:
                         try: # оборачиваем в try except чтобы при ошибках процесс продолжался
                             extension = att.filename.split('.')[-1].lower() # получаем расширение файла и делаем его строчным(для случаев наподобие XLSX)
-                            # print(msg_from)
-                            # print(att.filename)
-                            # print(extension)
-                            # print('*********')
+                            print(msg_from)
+                            print(att.filename)
                             if extension == 'xlsx' or extension == 'xls':  # проверяем на расширение
 
                                 if extension == 'xlsx': # Сохраняем во временную папку
@@ -77,6 +87,8 @@ with tempfile.TemporaryDirectory() as temp_dir:
                                     if len(wb.sheetnames) == 1: # Проверяем длину
                                         name_sheet = wb.sheetnames[0] # получаем название листа
                                         name_org = wb[first_list]['B5'].value # получаем значение ячейки B5
+                                        print(name_org)
+                                        print('*******')
                                         temp_df = pd.read_excel(f'{temp_dir}{work_file_name}',skiprows=4,header=None,dtype=str) # считываем датафрейм
                                         temp_df.dropna(thresh=15,inplace=True)
                                         temp_df[0] = msg_from
@@ -90,6 +102,9 @@ with tempfile.TemporaryDirectory() as temp_dir:
                                             try:
                                                 check_cols = ml_temp_df.iloc[:,1].any() # если есть хоть одно значение в колоноке 1 то добавляем эти данные
                                                 if check_cols:
+                                                    name_org = ml_temp_df.iloc[0,1]
+                                                    print(name_org)
+                                                    print('**********')
                                                     name_sheet = sheet
                                                     ml_temp_df.dropna(thresh=15, inplace=True)
                                                     ml_temp_df[0] = msg_from
@@ -106,11 +121,16 @@ with tempfile.TemporaryDirectory() as temp_dir:
                                         name_org = re.sub(r'\n', ' ', name_org)# очищаем от  символов новой строки
                                         name_org = re.sub(r'^\s+|\t|\s+$', '', name_org)#  и табов,пробелов в начале и конце
 
-                                        wb.save(f'{path_to_end}{name_org}.xlsx') # Сохраняем файл под названием организации
+                                        wb.save(f'{path_to_end}{dir_files_org}/{name_org}.xlsx') # Сохраняем файл под названием организации
                                     else: # если не заполнено то сохраняем под емайлом откуда прислан файл.
-                                        wb.save(f'{path_to_end}{msg_from}.xlsx')
+                                        wb.save(f'{path_to_end}{dir_files_org}/{msg_from}.xlsx')
+                                else:
+                                    wb.save(f'{path_to_end}{dir_files_other_excel}/{msg_from}_{work_file_name}')
 
                             else:
+                                with open(f'{path_to_end}{dir_other_files}/{msg_from}_{att.filename}', 'wb') as f:
+                                    f.write(att.payload)
+
                                 data = [msg_from,att.filename,msg_date,'Неправильный формат !!!']
 
                                 temp_bad = pd.DataFrame(columns=['Откуда прислан файл','Название файла','Время отправки','Тип ошибки'],data=[data]) # создаем датафрейм с данными ошибки
@@ -138,4 +158,5 @@ df.rename(columns={2:'Тип',3:'Наименование',4:'Краткое н�
                    14:'Телефон директора',15:'СНИЛС директора',16:'Email директора',17:'Согласие администратора',18:'ФИО администратора',
                    19:'Должность администратора',20:'Телефон администратора',21:'СНИЛС администратора',22:'Email администратора'},inplace=True)
 df.to_excel(f'{path_to_end}Данные организаций для ФГИС Моя Школа от {current_time}.xlsx',index=False)
+
 us_df.to_excel(f'{path_to_end}Ошибки и некорректные файлы для ФГИС Моя Школа от {current_time}.xlsx',index=False)
