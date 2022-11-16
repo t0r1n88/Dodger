@@ -49,10 +49,10 @@ with tempfile.TemporaryDirectory() as temp_dir:
                     for att in msg.attachments:
                         try: # оборачиваем в try except чтобы при ошибках процесс продолжался
                             extension = att.filename.split('.')[-1].lower() # получаем расширение файла и делаем его строчным(для случаев наподобие XLSX)
-                            print(msg_from)
-                            print(att.filename)
-                            print(extension)
-                            print('*********')
+                            # print(msg_from)
+                            # print(att.filename)
+                            # print(extension)
+                            # print('*********')
                             if extension == 'xlsx' or extension == 'xls':  # проверяем на расширение
 
                                 if extension == 'xlsx': # Сохраняем во временную папку
@@ -78,6 +78,7 @@ with tempfile.TemporaryDirectory() as temp_dir:
                                         name_sheet = wb.sheetnames[0] # получаем название листа
                                         name_org = wb[first_list]['B5'].value # получаем значение ячейки B5
                                         temp_df = pd.read_excel(f'{temp_dir}{work_file_name}',skiprows=4,header=None,dtype=str) # считываем датафрейм
+                                        temp_df.dropna(thresh=15,inplace=True)
                                         temp_df[0] = msg_from
                                         temp_df.insert(1,'Тип таблицы',name_sheet)
                                     else:
@@ -85,10 +86,12 @@ with tempfile.TemporaryDirectory() as temp_dir:
                                         temp_df = pd.DataFrame(columns=list(range(23)))
                                         for sheet in wb.sheetnames:
                                             ml_temp_df = pd.read_excel(f'{temp_dir}{work_file_name}',sheet_name=sheet,skiprows=4,header=None,dtype=str)
+
                                             try:
                                                 check_cols = ml_temp_df.iloc[:,1].any() # если есть хоть одно значение в колоноке 1 то добавляем эти данные
                                                 if check_cols:
                                                     name_sheet = sheet
+                                                    ml_temp_df.dropna(thresh=15, inplace=True)
                                                     ml_temp_df[0] = msg_from
                                                     ml_temp_df.insert(1, 'Тип таблицы', name_sheet)
                                                     temp_df=pd.concat([temp_df,ml_temp_df],ignore_index=True)
@@ -122,12 +125,6 @@ with tempfile.TemporaryDirectory() as temp_dir:
                             temp_bad['Время отправки'] = temp_bad['Время отправки'].apply(lambda x: pd.to_datetime(x).date())
                             us_df = pd.concat([us_df,temp_bad], ignore_index=True)
                             continue
-# except OSError:
-#     temp_bad = pd.DataFrame(columns=['Откуда прислан файл','Название файла','Время отправки','Тип ошибки'],
-#                             data=(
-#                             msg_from, att.filename, msg_date, 'Ошибка при обработке файла !!!'))  # создаем датафрейм с данными ошибки
-#     temp_bad['Время отправки'] = temp_bad['Время отправки'].apply(lambda x: pd.to_datetime(x).date())
-#     us_df = pd.concat([us_df,temp_bad], ignore_index=True)
 
 t = time.localtime()
 current_time = time.strftime('%H_%M_%S', t)
@@ -140,9 +137,5 @@ df.rename(columns={2:'Тип',3:'Наименование',4:'Краткое н�
                    6:'Регион',7:'ИНН',8:'ОГРН',9:'Email',10:'Телефон',11:'Согласие директора',12:'ФИО директора',13:'Должность директора',
                    14:'Телефон директора',15:'СНИЛС директора',16:'Email директора',17:'Согласие администратора',18:'ФИО администратора',
                    19:'Должность администратора',20:'Телефон администратора',21:'СНИЛС администратора',22:'Email администратора'},inplace=True)
-# df.columns = ['Откуда прислан файл','Лист','Полное наименование','Тип','Краткое наименование населенного пункта','Район,округ','Регион','ИНН','ОГРН',
-#               'Email','Телефон','Согласие директора',
-#               'ФИО директора','Должность','Телефон директора','СНИЛС директора','Email директора',
-#               'Согласие администратора','ФИО администратора','Должность администратора','Телефон администратора','СНИЛС администратора','Email администратора']
 df.to_excel(f'{path_to_end}Данные организаций для ФГИС Моя Школа от {current_time}.xlsx',index=False)
 us_df.to_excel(f'{path_to_end}Ошибки и некорректные файлы для ФГИС Моя Школа от {current_time}.xlsx',index=False)
