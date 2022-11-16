@@ -13,6 +13,7 @@ import tempfile
 import time
 import re
 import datetime
+from config import EMAIL,PASSWORD
 
 def getMergedCellVal(sheet, cell):
     """
@@ -24,29 +25,33 @@ def getMergedCellVal(sheet, cell):
 
 
 
-path_to_end = 'C:/Данные/'
+path_to_end = 'C:/Данные'
 # Get date, subject and body len of all emails from INBOX folder
+
+
+
 not_used = ['Спам','Отправленные','Черновики','Корзина']
 cols_df = list(range(23))
 df = pd.DataFrame(columns=cols_df) # базовый датафрейм
+df['Тип таблицы'] = None
 us_df = pd.DataFrame(columns=['Откуда прислан файл','Название файла','Время отправки','Тип ошибки']) # Датафрейм для неправильных файлов
 dir_files_org = 'Присланные формы ФГИС по организациям' # название папки куда будут сохраняться скачанные формы
 dir_files_other_excel = 'Файлы Excel не соответствующие форме'
 dir_other_files = 'Файлы с другими форматами'
-if not os.path.exists(f'{path_to_end}{dir_files_org}'): # проверяем наличие папки
-    os.makedirs(f'{path_to_end}{dir_files_org}') # если ее нет то создаем
+if not os.path.exists(f'{path_to_end}/{dir_files_org}'): # проверяем наличие папки
+    os.makedirs(f'{path_to_end}/{dir_files_org}') # если ее нет то создаем
 
-if not os.path.exists(f'{path_to_end}{dir_files_other_excel}'): # проверяем наличие папки
-    os.makedirs(f'{path_to_end}{dir_files_other_excel}') # если ее нет то создаем
+if not os.path.exists(f'{path_to_end}/{dir_files_other_excel}'): # проверяем наличие папки
+    os.makedirs(f'{path_to_end}/{dir_files_other_excel}') # если ее нет то создаем
 
-if not os.path.exists(f'{path_to_end}{dir_other_files}'):  # проверяем наличие папки
-    os.makedirs(f'{path_to_end}{dir_other_files}')  # если ее нет то создаем
+if not os.path.exists(f'{path_to_end}/{dir_other_files}'):  # проверяем наличие папки
+    os.makedirs(f'{path_to_end}/{dir_other_files}')  # если ее нет то создаем
 
 
 with tempfile.TemporaryDirectory() as temp_dir:
 
 
-    with MailBox('imap.mail.ru').login('myschool@copp03.ru', 'irjkf@_22') as mailbox:
+    with MailBox('imap.mail.ru').login(EMAIL,PASSWORD) as mailbox:
         for f in mailbox.folder.list():
             if f.name not in not_used:
                 mailbox.folder.set(f.name)
@@ -121,14 +126,14 @@ with tempfile.TemporaryDirectory() as temp_dir:
                                         name_org = re.sub(r'\n', ' ', name_org)# очищаем от  символов новой строки
                                         name_org = re.sub(r'^\s+|\t|\s+$', '', name_org)#  и табов,пробелов в начале и конце
 
-                                        wb.save(f'{path_to_end}{dir_files_org}/{name_org}.xlsx') # Сохраняем файл под названием организации
+                                        wb.save(f'{path_to_end}/{dir_files_org}/{name_org}.xlsx') # Сохраняем файл под названием организации
                                     else: # если не заполнено то сохраняем под емайлом откуда прислан файл.
-                                        wb.save(f'{path_to_end}{dir_files_org}/{msg_from}.xlsx')
+                                        wb.save(f'{path_to_end}/{dir_files_org}/{msg_from}.xlsx')
                                 else:
-                                    wb.save(f'{path_to_end}{dir_files_other_excel}/{msg_from}_{work_file_name}')
+                                    wb.save(f'{path_to_end}/{dir_files_other_excel}/{msg_from}_{work_file_name}')
 
                             else:
-                                with open(f'{path_to_end}{dir_other_files}/{msg_from}_{att.filename}', 'wb') as f:
+                                with open(f'{path_to_end}/{dir_other_files}/{msg_from}_{att.filename}', 'wb') as f:
                                     f.write(att.payload)
 
                                 data = [msg_from,att.filename,msg_date,'Неправильный формат !!!']
@@ -150,6 +155,7 @@ t = time.localtime()
 current_time = time.strftime('%H_%M_%S', t)
 
 df.rename(columns={0:'Откуда прислан файл',1:'Название учреждения'},inplace=True)
+df.to_excel('Тесе.xlsx',index=False)
 df.insert(1,'Лист',df['Тип таблицы'])
 df.drop(columns=['Тип таблицы'],inplace=True)
 
@@ -157,6 +163,6 @@ df.rename(columns={2:'Тип',3:'Наименование',4:'Краткое н�
                    6:'Регион',7:'ИНН',8:'ОГРН',9:'Email',10:'Телефон',11:'Согласие директора',12:'ФИО директора',13:'Должность директора',
                    14:'Телефон директора',15:'СНИЛС директора',16:'Email директора',17:'Согласие администратора',18:'ФИО администратора',
                    19:'Должность администратора',20:'Телефон администратора',21:'СНИЛС администратора',22:'Email администратора'},inplace=True)
-df.to_excel(f'{path_to_end}Данные организаций для ФГИС Моя Школа от {current_time}.xlsx',index=False)
+df.to_excel(f'{path_to_end}/Данные организаций для ФГИС Моя Школа от {current_time}.xlsx',index=False)
 
-us_df.to_excel(f'{path_to_end}Ошибки и некорректные файлы для ФГИС Моя Школа от {current_time}.xlsx',index=False)
+us_df.to_excel(f'{path_to_end}/Ошибки и некорректные файлы для ФГИС Моя Школа от {current_time}.xlsx',index=False)
