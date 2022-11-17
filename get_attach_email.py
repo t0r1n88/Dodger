@@ -3,7 +3,7 @@
 
 """
 import string
-
+import numpy as np
 from imap_tools import MailBox, AND
 from xls2xlsx import XLS2XLSX
 import os
@@ -128,8 +128,20 @@ with tempfile.TemporaryDirectory() as temp_dir:
 
                                         wb.save(f'{path_to_end}/{dir_files_org}/{name_org}.xlsx') # Сохраняем файл под названием организации
                                     else: # если не заполнено то сохраняем под емайлом откуда прислан файл.
+                                        temp_bad = pd.DataFrame(
+                                            columns=['Откуда прислан файл', 'Название файла', 'Время отправки',
+                                                     'Тип ошибки'],
+                                            data=[[
+                                                msg_from, att.filename, msg_date,
+                                                'Незаполненный файл !!!']])  # создаем датафрейм с данными ошибки
+                                        temp_bad['Время отправки'] = temp_bad['Время отправки'].apply(
+                                            lambda x: pd.to_datetime(x))
+                                        us_df = pd.concat([us_df, temp_bad],
+                                                          ignore_index=True)  # добавляем в список ошибок
+
                                         wb.save(f'{path_to_end}/{dir_files_org}/{msg_from}.xlsx')
                                 else:
+                                    # Если файл Excel не подходит под форму то сохраняем его в отдельную папку
                                     wb.save(f'{path_to_end}/{dir_files_other_excel}/{msg_from}_{work_file_name}')
 
                             else:
@@ -139,15 +151,15 @@ with tempfile.TemporaryDirectory() as temp_dir:
                                 data = [msg_from,att.filename,msg_date,'Неправильный формат !!!']
 
                                 temp_bad = pd.DataFrame(columns=['Откуда прислан файл','Название файла','Время отправки','Тип ошибки'],data=[data]) # создаем датафрейм с данными ошибки
-                                temp_bad['Время отправки'] = temp_bad['Время отправки'].apply(lambda x: pd.to_datetime(x).date())
+                                temp_bad['Время отправки'] = temp_bad['Время отправки'].apply(lambda x: pd.to_datetime(x))
 
                                 us_df = pd.concat([us_df,temp_bad],ignore_index=True)
                         except:
 
                             temp_bad = pd.DataFrame(columns=['Откуда прислан файл','Название файла','Время отправки','Тип ошибки'],
-                                                    data=(
-                                                    msg_from, att.filename, msg_date, 'Ошибка при обработке файла !!!'))  # создаем датафрейм с данными ошибки
-                            temp_bad['Время отправки'] = temp_bad['Время отправки'].apply(lambda x: pd.to_datetime(x).date())
+                                                    data=[[
+                                                    msg_from, att.filename, msg_date, 'Ошибка при обработке файла !!!']])  # создаем датафрейм с данными ошибки
+                            temp_bad['Время отправки'] = temp_bad['Время отправки'].apply(lambda x: pd.to_datetime(x))
                             us_df = pd.concat([us_df,temp_bad], ignore_index=True)
                             continue
 
@@ -165,4 +177,11 @@ df.rename(columns={2:'Тип',3:'Наименование',4:'Краткое н�
                    19:'Должность администратора',20:'Телефон администратора',21:'СНИЛС администратора',22:'Email администратора'},inplace=True)
 df.to_excel(f'{path_to_end}/Данные организаций для ФГИС Моя Школа от {current_time}.xlsx',index=False)
 
+us_df['Название файла'] = us_df['Название файла'].replace('',np.nan)
+
+us_df.dropna(inplace=True)
+us_df['Время отправки'] = us_df['Время отправки'].apply(lambda a: datetime.datetime.strftime(a,"%Y-%m-%d %H:%M:%S")) # удаляем таймзону конвертируя в строку
+us_df['Время отправки'] = pd.to_datetime(us_df['Время отправки']) # конвертируем обратно в дату
+us_df.sort_values(by='Время отправки',inplace=True) # сортируем по времени
+us_df.drop_duplicates(subset=['Откуда прислан файл'],keep='last',inplace=True)
 us_df.to_excel(f'{path_to_end}/Ошибки и некорректные файлы для ФГИС Моя Школа от {current_time}.xlsx',index=False)
