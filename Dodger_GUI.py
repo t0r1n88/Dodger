@@ -17,6 +17,7 @@ import warnings
 warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
 pd.options.mode.chained_assignment = None
 from config import EMAIL,PASSWORD
+import random
 
 
 def resource_path(relative_path):
@@ -74,7 +75,6 @@ def processing_data():
         os.makedirs(f'{path_to_end}/{dir_other_files}')  # если ее нет то создаем
 
     with tempfile.TemporaryDirectory() as temp_dir:
-
         with MailBox('imap.mail.ru').login(EMAIL, PASSWORD) as mailbox:
             for f in mailbox.folder.list():
                 if f.name not in not_used:
@@ -121,7 +121,8 @@ def processing_data():
                                             print(name_org)
                                             print('*******')
                                             temp_df = pd.read_excel(f'{temp_dir}{work_file_name}', skiprows=4,
-                                                                    header=None, dtype=str)  # считываем датафрейм
+                                                                    header=None,
+                                                                    dtype=str)  # считываем датафрейм
                                             temp_df.dropna(thresh=15, inplace=True)
                                             temp_df[0] = msg_from  # добавляем от кого
                                             temp_df.insert(1, 'Тип таблицы', name_sheet)  # добавляем название листа
@@ -134,8 +135,8 @@ def processing_data():
                                             temp_df = pd.DataFrame(columns=list(range(24)))
                                             for sheet in wb.sheetnames:
                                                 ml_temp_df = pd.read_excel(f'{temp_dir}{work_file_name}',
-                                                                           sheet_name=sheet, skiprows=4, header=None,
-                                                                           dtype=str)
+                                                                           sheet_name=sheet,
+                                                                           skiprows=4, header=None, dtype=str)
 
                                                 try:
                                                     check_cols = ml_temp_df.iloc[:,
@@ -194,7 +195,8 @@ def processing_data():
 
                                     temp_bad = pd.DataFrame(
                                         columns=['Откуда прислан файл', 'Название файла', 'Время отправки',
-                                                 'Тип ошибки'], data=[data])  # создаем датафрейм с данными ошибки
+                                                 'Тип ошибки'],
+                                        data=[data])  # создаем датафрейм с данными ошибки
                                     temp_bad['Время отправки'] = temp_bad['Время отправки'].apply(
                                         lambda x: pd.to_datetime(x))
 
@@ -229,9 +231,14 @@ def processing_data():
                        6: 'Регион', 7: 'ИНН', 8: 'ОГРН', 9: 'Email', 10: 'Телефон', 11: 'Согласие директора',
                        12: 'ФИО директора', 13: 'Должность директора',
                        14: 'Телефон директора', 15: 'СНИЛС директора', 16: 'Email директора',
-                       17: 'Согласие администратора', 18: 'ФИО администратора',
+                       17: 'Согласие администратора',
+                       18: 'ФИО администратора',
                        19: 'Должность администратора', 20: 'Телефон администратора', 21: 'СНИЛС администратора',
                        22: 'Email администратора'}, inplace=True)
+
+    df['Название учреждения'] = df['Название учреждения'].replace('', np.nan)
+    df['Название учреждения'] = df['Название учреждения'].fillna(
+        f'{random.random()}')  # заполняем рандомным числом, чтобы при очистке от дубликатов не удалилось строки с незаполненными названиями
 
     df.drop_duplicates(subset=['Название учреждения'], keep='last', inplace=True)
 
@@ -262,13 +269,14 @@ def processing_data():
 
 
 
+
     messagebox.showinfo(message='Обработка завершена! ')
 
 
 
 if __name__ == '__main__':
     window = Tk()
-    window.title('Dodger ver 1.1')
+    window.title('Dodger ver 1.2')
     window.geometry('700x560')
     window.resizable(False, False)
 
