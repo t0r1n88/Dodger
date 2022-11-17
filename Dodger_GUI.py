@@ -50,6 +50,19 @@ def getMergedCellVal(sheet, cell):
     rng = [s for s in sheet.merged_cells.ranges if cell.coordinate in s]
     return sheet.cell(rng[0].min_row, rng[0].min_col).value if len(rng)!=0 else cell.value
 
+def fix_inn_bur(inn):
+    """
+    Функция для исправления инн Бурятии,для случаев когда лидирующий ноль съедается экселем
+        """
+    inn = inn.replace('.', '').strip()  # Удаляем точку и пробелы
+    inn_len = len(inn)
+    if inn_len == 10:
+        return inn
+    elif inn_len == 9 and inn.startswith('3'):
+        return f'0{inn}'
+    else:
+        return f'ИНН юридического лица состоит из 10 цифр! - {inn}'
+
 
 def processing_data():
     """
@@ -224,7 +237,7 @@ def processing_data():
     df.sort_values(by='Время отправки', inplace=True)  # сортируем по времени
 
     df.insert(2, 'Дата и время отправки', df['Время отправки'])
-    df.drop(columns=['Тип таблицы', 'Время отправки', 23], inplace=True)
+    # df.drop(columns=['Тип таблицы', 'Время отправки', 23], inplace=True)
 
     df.rename(columns={2: 'Тип', 3: 'Наименование', 4: 'Краткое наименование населенного пункта',
                        5: 'Наименование муниципального района, муниципального/городского округа',
@@ -236,11 +249,15 @@ def processing_data():
                        19: 'Должность администратора', 20: 'Телефон администратора', 21: 'СНИЛС администратора',
                        22: 'Email администратора'}, inplace=True)
 
+    df.drop(columns=df.iloc[:, 25:], inplace=True)
+
     df['Название учреждения'] = df['Название учреждения'].replace('', np.nan)
     df['Название учреждения'] = df['Название учреждения'].fillna(
-        f'{random.random()}')  # заполняем рандомным числом, чтобы при очистке от дубликатов не удалилось строки с незаполненными названиями
+        f'{random.random()}')  # заполняем рандомным числом, чтобы при очистке от дубликатов не удалилось
 
-    df.drop_duplicates(subset=['Название учреждения'], keep='last', inplace=True)
+    df.drop_duplicates(subset=['Название учреждения'], keep='last', inplace=True)  # удаляем дубликаты
+
+    df['ИНН'] = df['ИНН'].apply(fix_inn_bur)
 
     df.to_excel(f'{path_to_end}/Данные организаций для ФГИС Моя Школа от {current_time}.xlsx', index=False)
 
@@ -276,7 +293,7 @@ def processing_data():
 
 if __name__ == '__main__':
     window = Tk()
-    window.title('Dodger ver 1.2')
+    window.title('Dodger ver 1.3')
     window.geometry('700x560')
     window.resizable(False, False)
 
