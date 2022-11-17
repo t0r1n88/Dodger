@@ -14,6 +14,7 @@ import time
 import re
 import datetime
 from config import EMAIL,PASSWORD
+pd.options.mode.chained_assignment = None
 
 def getMergedCellVal(sheet, cell):
     """
@@ -31,7 +32,7 @@ path_to_end = 'C:/Данные'
 
 
 not_used = ['Спам','Отправленные','Черновики','Корзина']
-cols_df = list(range(23))
+cols_df = list(range(24))
 df = pd.DataFrame(columns=cols_df) # базовый датафрейм
 df['Тип таблицы'] = None
 us_df = pd.DataFrame(columns=['Откуда прислан файл','Название файла','Время отправки','Тип ошибки']) # Датафрейм для неправильных файлов
@@ -96,11 +97,13 @@ with tempfile.TemporaryDirectory() as temp_dir:
                                         print('*******')
                                         temp_df = pd.read_excel(f'{temp_dir}{work_file_name}',skiprows=4,header=None,dtype=str) # считываем датафрейм
                                         temp_df.dropna(thresh=15,inplace=True)
-                                        temp_df[0] = msg_from
-                                        temp_df.insert(1,'Тип таблицы',name_sheet)
+                                        temp_df[0] = msg_from # добавляем от кого
+                                        temp_df.insert(1,'Тип таблицы',name_sheet) # добавляем название листа
+                                        temp_df.insert(2, 'Время отправки', msg.date) # добавляем дату и время отправления
+                                        temp_df['Время отправки'] = temp_df['Время отправки'].apply(lambda x: pd.to_datetime(x))
                                     else:
                                         len_sheets = len(wb.sheetnames)
-                                        temp_df = pd.DataFrame(columns=list(range(23)))
+                                        temp_df = pd.DataFrame(columns=list(range(24)))
                                         for sheet in wb.sheetnames:
                                             ml_temp_df = pd.read_excel(f'{temp_dir}{work_file_name}',sheet_name=sheet,skiprows=4,header=None,dtype=str)
 
@@ -114,6 +117,9 @@ with tempfile.TemporaryDirectory() as temp_dir:
                                                     ml_temp_df.dropna(thresh=15, inplace=True)
                                                     ml_temp_df[0] = msg_from
                                                     ml_temp_df.insert(1, 'Тип таблицы', name_sheet)
+                                                    ml_temp_df.insert(2, 'Время отправки', msg_date)  # добавляем дату и время отправления
+                                                    ml_temp_df['Время отправки'] = ml_temp_df['Время отправки'].apply(
+                                                        lambda x: pd.to_datetime(x))
                                                     temp_df=pd.concat([temp_df,ml_temp_df],ignore_index=True)
 
                                             except IndexError:
@@ -167,14 +173,23 @@ t = time.localtime()
 current_time = time.strftime('%H_%M_%S', t)
 
 df.rename(columns={0:'Откуда прислан файл',1:'Название учреждения'},inplace=True)
-df.to_excel('Тесе.xlsx',index=False)
 df.insert(1,'Лист',df['Тип таблицы'])
-df.drop(columns=['Тип таблицы'],inplace=True)
+df['Время отправки'] = df['Время отправки'].apply(lambda a: datetime.datetime.strftime(a,"%Y-%m-%d %H:%M:%S")) # удаляем таймзону конвертируя в строку
+df['Время отправки'] = pd.to_datetime(df['Время отправки']) # конвертируем обратно в дату
+df.sort_values(by='Время отправки',inplace=True) # сортируем по времени
+
+df.insert(2,'Дата и время отправки',df['Время отправки'])
+df.drop(columns=['Тип таблицы','Время отправки',23],inplace=True)
+
 
 df.rename(columns={2:'Тип',3:'Наименование',4:'Краткое наименование населенного пункта',5:'Наименование муниципального района, муниципального/городского округа',
                    6:'Регион',7:'ИНН',8:'ОГРН',9:'Email',10:'Телефон',11:'Согласие директора',12:'ФИО директора',13:'Должность директора',
                    14:'Телефон директора',15:'СНИЛС директора',16:'Email директора',17:'Согласие администратора',18:'ФИО администратора',
                    19:'Должность администратора',20:'Телефон администратора',21:'СНИЛС администратора',22:'Email администратора'},inplace=True)
+
+df.drop_duplicates(subset=['Название учреждения'],keep='last',inplace=True)
+
+
 df.to_excel(f'{path_to_end}/Данные организаций для ФГИС Моя Школа от {current_time}.xlsx',index=False)
 
 us_df['Название файла'] = us_df['Название файла'].replace('',np.nan)
@@ -183,10 +198,11 @@ us_df.dropna(inplace=True)
 us_df['Время отправки'] = us_df['Время отправки'].apply(lambda a: datetime.datetime.strftime(a,"%Y-%m-%d %H:%M:%S")) # удаляем таймзону конвертируя в строку
 us_df['Время отправки'] = pd.to_datetime(us_df['Время отправки']) # конвертируем обратно в дату
 us_df.sort_values(by='Время отправки',inplace=True) # сортируем по времени
-us_df.drop_duplicates(subset=['Откуда прислан файл'],keep='last',inplace=True) # убираем дубликаты оставляя только последний присланнный неправильый файл
-us_df = pd.merge(us_df,df,how='outer',left_on='Откуда прислан файл',right_on='Откуда прислан файл',indicator=True) # мерджим файлы
 
+us_df = pd.merge(us_df,df,how='outer',left_on='Откуда прислан файл',right_on='Откуда прислан файл',indicator=True) # мерджим файлы
 out_error_df = us_df[us_df['_merge'] != 'right_only'] # отбираем только те котороые есть и основном и ошибочном
+out_error_df.drop_duplicates(subset=['Откуда прислан файл'],keep='last',inplace=True) # убираем дубликаты оставляя только последний присланнный неправильый файл
+
 out_error_df = out_error_df.drop(columns=out_error_df.iloc[:,4:-1],axis=1) # удаляем лишние столбцы
 out_error_df.rename(columns={'_merge':'Итоговый результат'},inplace=True) # переименовываем колонку
 out_error_df['Итоговый результат'] =out_error_df['Итоговый результат'].apply(lambda x:

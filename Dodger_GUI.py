@@ -1,12 +1,10 @@
-import tkinter
-import sys
-import os
 from tkinter import *
 from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import ttk
 import string
-
+import numpy as np
+import datetime
 from imap_tools import MailBox, AND
 from xls2xlsx import XLS2XLSX
 import os
@@ -17,6 +15,7 @@ import time
 # pd.options.mode.chained_assignment = None  # default='warn'
 import warnings
 warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
+pd.options.mode.chained_assignment = None
 from config import EMAIL,PASSWORD
 
 
@@ -57,7 +56,7 @@ def processing_data():
     :return:
     """
     not_used = ['Спам', 'Отправленные', 'Черновики', 'Корзина']
-    cols_df = list(range(23))
+    cols_df = list(range(24))
     df = pd.DataFrame(columns=cols_df)  # базовый датафрейм
     df['Тип таблицы'] = None
     us_df = pd.DataFrame(columns=['Откуда прислан файл', 'Название файла', 'Время отправки',
@@ -124,11 +123,15 @@ def processing_data():
                                             temp_df = pd.read_excel(f'{temp_dir}{work_file_name}', skiprows=4,
                                                                     header=None, dtype=str)  # считываем датафрейм
                                             temp_df.dropna(thresh=15, inplace=True)
-                                            temp_df[0] = msg_from
-                                            temp_df.insert(1, 'Тип таблицы', name_sheet)
+                                            temp_df[0] = msg_from  # добавляем от кого
+                                            temp_df.insert(1, 'Тип таблицы', name_sheet)  # добавляем название листа
+                                            temp_df.insert(2, 'Время отправки',
+                                                           msg.date)  # добавляем дату и время отправления
+                                            temp_df['Время отправки'] = temp_df['Время отправки'].apply(
+                                                lambda x: pd.to_datetime(x))
                                         else:
                                             len_sheets = len(wb.sheetnames)
-                                            temp_df = pd.DataFrame(columns=list(range(23)))
+                                            temp_df = pd.DataFrame(columns=list(range(24)))
                                             for sheet in wb.sheetnames:
                                                 ml_temp_df = pd.read_excel(f'{temp_dir}{work_file_name}',
                                                                            sheet_name=sheet, skiprows=4, header=None,
@@ -145,6 +148,11 @@ def processing_data():
                                                         ml_temp_df.dropna(thresh=15, inplace=True)
                                                         ml_temp_df[0] = msg_from
                                                         ml_temp_df.insert(1, 'Тип таблицы', name_sheet)
+                                                        ml_temp_df.insert(2, 'Время отправки',
+                                                                          msg_date)  # добавляем дату и время отправления
+                                                        ml_temp_df['Время отправки'] = ml_temp_df[
+                                                            'Время отправки'].apply(
+                                                            lambda x: pd.to_datetime(x))
                                                         temp_df = pd.concat([temp_df, ml_temp_df], ignore_index=True)
 
                                                 except IndexError:
@@ -162,8 +170,20 @@ def processing_data():
                                             wb.save(
                                                 f'{path_to_end}/{dir_files_org}/{name_org}.xlsx')  # Сохраняем файл под названием организации
                                         else:  # если не заполнено то сохраняем под емайлом откуда прислан файл.
+                                            temp_bad = pd.DataFrame(
+                                                columns=['Откуда прислан файл', 'Название файла', 'Время отправки',
+                                                         'Тип ошибки'],
+                                                data=[[
+                                                    msg_from, att.filename, msg_date,
+                                                    'Незаполненный файл !!!']])  # создаем датафрейм с данными ошибки
+                                            temp_bad['Время отправки'] = temp_bad['Время отправки'].apply(
+                                                lambda x: pd.to_datetime(x))
+                                            us_df = pd.concat([us_df, temp_bad],
+                                                              ignore_index=True)  # добавляем в список ошибок
+
                                             wb.save(f'{path_to_end}/{dir_files_org}/{msg_from}.xlsx')
                                     else:
+                                        # Если файл Excel не подходит под форму то сохраняем его в отдельную папку
                                         wb.save(f'{path_to_end}/{dir_files_other_excel}/{msg_from}_{work_file_name}')
 
                                 else:
@@ -176,18 +196,18 @@ def processing_data():
                                         columns=['Откуда прислан файл', 'Название файла', 'Время отправки',
                                                  'Тип ошибки'], data=[data])  # создаем датафрейм с данными ошибки
                                     temp_bad['Время отправки'] = temp_bad['Время отправки'].apply(
-                                        lambda x: pd.to_datetime(x).date())
+                                        lambda x: pd.to_datetime(x))
 
                                     us_df = pd.concat([us_df, temp_bad], ignore_index=True)
                             except:
 
                                 temp_bad = pd.DataFrame(
                                     columns=['Откуда прислан файл', 'Название файла', 'Время отправки', 'Тип ошибки'],
-                                    data=(
+                                    data=[[
                                         msg_from, att.filename, msg_date,
-                                        'Ошибка при обработке файла !!!'))  # создаем датафрейм с данными ошибки
+                                        'Ошибка при обработке файла !!!']])  # создаем датафрейм с данными ошибки
                                 temp_bad['Время отправки'] = temp_bad['Время отправки'].apply(
-                                    lambda x: pd.to_datetime(x).date())
+                                    lambda x: pd.to_datetime(x))
                                 us_df = pd.concat([us_df, temp_bad], ignore_index=True)
                                 continue
 
@@ -196,7 +216,13 @@ def processing_data():
 
     df.rename(columns={0: 'Откуда прислан файл', 1: 'Название учреждения'}, inplace=True)
     df.insert(1, 'Лист', df['Тип таблицы'])
-    df.drop(columns=['Тип таблицы'], inplace=True)
+    df['Время отправки'] = df['Время отправки'].apply(
+        lambda a: datetime.datetime.strftime(a, "%Y-%m-%d %H:%M:%S"))  # удаляем таймзону конвертируя в строку
+    df['Время отправки'] = pd.to_datetime(df['Время отправки'])  # конвертируем обратно в дату
+    df.sort_values(by='Время отправки', inplace=True)  # сортируем по времени
+
+    df.insert(2, 'Дата и время отправки', df['Время отправки'])
+    df.drop(columns=['Тип таблицы', 'Время отправки', 23], inplace=True)
 
     df.rename(columns={2: 'Тип', 3: 'Наименование', 4: 'Краткое наименование населенного пункта',
                        5: 'Наименование муниципального района, муниципального/городского округа',
@@ -206,9 +232,34 @@ def processing_data():
                        17: 'Согласие администратора', 18: 'ФИО администратора',
                        19: 'Должность администратора', 20: 'Телефон администратора', 21: 'СНИЛС администратора',
                        22: 'Email администратора'}, inplace=True)
+
+    df.drop_duplicates(subset=['Название учреждения'], keep='last', inplace=True)
+
     df.to_excel(f'{path_to_end}/Данные организаций для ФГИС Моя Школа от {current_time}.xlsx', index=False)
 
-    us_df.to_excel(f'{path_to_end}/Ошибки и некорректные файлы для ФГИС Моя Школа от {current_time}.xlsx', index=False)
+    us_df['Название файла'] = us_df['Название файла'].replace('', np.nan)
+
+    us_df.dropna(inplace=True)
+    us_df['Время отправки'] = us_df['Время отправки'].apply(
+        lambda a: datetime.datetime.strftime(a, "%Y-%m-%d %H:%M:%S"))  # удаляем таймзону конвертируя в строку
+    us_df['Время отправки'] = pd.to_datetime(us_df['Время отправки'])  # конвертируем обратно в дату
+    us_df.sort_values(by='Время отправки', inplace=True)  # сортируем по времени
+
+    us_df = pd.merge(us_df, df, how='outer', left_on='Откуда прислан файл', right_on='Откуда прислан файл',
+                     indicator=True)  # мерджим файлы
+    out_error_df = us_df[us_df['_merge'] != 'right_only']  # отбираем только те котороые есть и основном и ошибочном
+    out_error_df.drop_duplicates(subset=['Откуда прислан файл'], keep='last',
+                                 inplace=True)  # убираем дубликаты оставляя только последний присланнный неправильый файл
+
+    out_error_df = out_error_df.drop(columns=out_error_df.iloc[:, 4:-1], axis=1)  # удаляем лишние столбцы
+    out_error_df.rename(columns={'_merge': 'Итоговый результат'}, inplace=True)  # переименовываем колонку
+    out_error_df['Итоговый результат'] = out_error_df['Итоговый результат'].apply(lambda x:
+                                                                                  'Данные добавлены в основую таблицу из сопутствующего файла Excel' if x == 'both'
+                                                                                  else 'Отсутствуют в основной таблице. Прислан пустой файл формы или файл формы не в формате Excel ')
+
+    out_error_df.to_excel(f'{path_to_end}/Ошибки и некорректные файлы для ФГИС Моя Школа от {current_time}.xlsx',
+                          index=False)
+
 
 
     messagebox.showinfo(message='Обработка завершена! ')
