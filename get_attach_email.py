@@ -183,5 +183,14 @@ us_df.dropna(inplace=True)
 us_df['Время отправки'] = us_df['Время отправки'].apply(lambda a: datetime.datetime.strftime(a,"%Y-%m-%d %H:%M:%S")) # удаляем таймзону конвертируя в строку
 us_df['Время отправки'] = pd.to_datetime(us_df['Время отправки']) # конвертируем обратно в дату
 us_df.sort_values(by='Время отправки',inplace=True) # сортируем по времени
-us_df.drop_duplicates(subset=['Откуда прислан файл'],keep='last',inplace=True)
-us_df.to_excel(f'{path_to_end}/Ошибки и некорректные файлы для ФГИС Моя Школа от {current_time}.xlsx',index=False)
+us_df.drop_duplicates(subset=['Откуда прислан файл'],keep='last',inplace=True) # убираем дубликаты оставляя только последний присланнный неправильый файл
+us_df = pd.merge(us_df,df,how='outer',left_on='Откуда прислан файл',right_on='Откуда прислан файл',indicator=True) # мерджим файлы
+
+out_error_df = us_df[us_df['_merge'] != 'right_only'] # отбираем только те котороые есть и основном и ошибочном
+out_error_df = out_error_df.drop(columns=out_error_df.iloc[:,4:-1],axis=1) # удаляем лишние столбцы
+out_error_df.rename(columns={'_merge':'Итоговый результат'},inplace=True) # переименовываем колонку
+out_error_df['Итоговый результат'] =out_error_df['Итоговый результат'].apply(lambda x:
+                                                                             'Данные добавлены в основую таблицу из сопутствующего файла Excel' if x == 'both'
+                                                                             else 'Отсутствуют в основной таблице. Прислан пустой файл формы или файл формы не в формате Excel ')
+
+out_error_df.to_excel(f'{path_to_end}/Ошибки и некорректные файлы для ФГИС Моя Школа от {current_time}.xlsx',index=False)
