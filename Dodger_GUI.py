@@ -252,12 +252,12 @@ def processing_data():
     df.drop(columns=df.iloc[:, 25:], inplace=True)
 
     df['Название учреждения'] = df['Название учреждения'].replace('', np.nan)
-    df['Название учреждения'] = df['Название учреждения'].fillna(
-        f'{random.random()}')  # заполняем рандомным числом, чтобы при очистке от дубликатов не удалилось
 
+    null_df = df[df['Название учреждения'].isnull()]  # получаем датафрейм с Nan
+    df = df[~df['Название учреждения'].isnull()]  # получаем датафрейм без Nan
     df.drop_duplicates(subset=['Название учреждения'], keep='last', inplace=True)  # удаляем дубликаты
-
-    df['ИНН'] = df['ИНН'].apply(fix_inn_bur)
+    df = pd.concat([df, null_df], ignore_index=True)  # соединяем датафреймы
+    df['ИНН'] = df['ИНН'].apply(fix_inn_bur)  # чиним инн бурятии
 
     df.to_excel(f'{path_to_end}/Данные организаций для ФГИС Моя Школа от {current_time}.xlsx', index=False)
 
@@ -283,9 +283,6 @@ def processing_data():
 
     out_error_df.to_excel(f'{path_to_end}/Ошибки и некорректные файлы для ФГИС Моя Школа от {current_time}.xlsx',
                           index=False)
-
-
-
 
     messagebox.showinfo(message='Обработка завершена! ')
 
